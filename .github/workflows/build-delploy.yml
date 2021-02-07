@@ -1,0 +1,39 @@
+on: [push]
+name: build
+jobs:
+  runhaskell:
+    name: Build and deploy
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    strategy:
+      matrix:
+        cabal: ["3.0"]
+        ghc: ["8.8.3"]
+    env:
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-haskell@v1.1
+        id: setup-haskell-cabal
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          enable-stack: ${{ matrix.cabal}}
+      - run: cabal v2-update
+      - run: cabal v2-freeze $CONFIG
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+            dist-newstyle
+          key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-
+      - run: cabal v2-build --only-dependencies
+      - run: cabal v2-build
+      - run: cabal exec site build
+      - name: 'Run peaceiris/actions-gh-pages@v2.5.0: deploy to github pages'
+        uses: peaceiris/actions-gh-pages@v2.5.0
+        env:
+          ACTIONS_DEPLOY_KEY: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          PUBLISH_BRANCH: gh-pages
+          PUBLISH_DIR: _site
+        if: github.ref == 'refs/heads/master'

@@ -1,0 +1,382 @@
+/* global variables; access via var(--name) */
+/*:root {
+  --myTextColor: #30270c;
+  --myBackgroundColor: #faf6eb;
+  --myCodeColor: #f4eacf;
+
+  --myHomeColor: #c1804e;
+  --myBlogColor: #8b89a3;
+  --myAboutColor: #363b65;
+  --myContactColor: #825b7b;
+}*/
+
+/*
+:root {
+  --myTextColor: #464848;
+  --myBackgroundColor: #e9f0ef;
+  --myCodeColor: #e8f3f7;
+
+  --myHomeColor: #464848;
+  --myBlogColor: #a88c83;
+  --myAboutColor: #85aba5;
+  --myContactColor: #30778e;
+}
+*/
+
+/*
+:root {
+  --myTextColor: #20303b;
+  --myBackgroundColor: #f4ebd0;
+  --myCodeColor: #eedfb4;
+
+  --myHomeColor: #742a29;
+  --myBlogColor: #8c523d;
+  --myAboutColor: #ac563d;
+  --myContactColor: #e97c61;
+}
+*/
+
+/*
+:root {
+  --myTextColor: #2b7176;
+  --myBackgroundColor: #f3ebc2;
+  --myCodeColor: #f0e6b4;
+
+  --myHomeColor: #c34e57;
+  --myBlogColor: #a15353;
+  --myAboutColor: #cf645a;
+  --myContactColor: #df6151;
+}
+*/
+
+/*
+:root {
+  --myTextColor: #f7f7f6;
+  --myBackgroundColor: #353134;
+  --myCodeColor: #8ca293;
+
+  --myHomeColor: #7d7c59;
+  --myBlogColor: #7d7c59;
+  --myAboutColor: #7d7c59;
+  --myContactColor: #7d7c59;
+}
+*/
+:root {
+  --myTextColor: #3b3b3b;
+  --myBackgroundColor: #ffffff;
+  --myCodeColor: #ebebeb;
+
+  --unitColor: var(--myCodeColor);
+  --myHomeColor: var(--unitColor);
+  --myBlogColor: var(--unitColor);
+  --myAboutColor: var(--unitColor);
+  --myContactColor: var(--unitColor);
+}
+
+
+a:link {
+  color: #719b34;
+}
+a:visited {
+  color: #688e2f;
+}
+a:hover {
+  color: #567427;
+}
+a:active {
+  color: #green;
+}
+
+
+/* define a marker for all lists */
+::marker {
+  content: "▸ ";
+  color: var(--myTextColor);
+}
+
+
+html {
+  font-size: 18px;
+  margin: 0 auto;
+  max-width: 1000px;
+  width: 100%;
+  font-family: 'EB Garamond', serif;
+}
+
+/* Some padding to center content */
+main.content {
+  padding: 2% 5% 0% 6.0rem;
+}
+
+body {
+  /* text color */
+  color: var(--myTextColor);
+	background-color: var(--myBackgroundColor);
+
+  margin-left: 2.5rem;
+  margin-right: 7.0rem;
+}
+
+/* headings */
+h1 {
+  font-size: 1.8rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-top: 0.38rem;
+  margin-bottom: 0.38rem;
+}
+
+h3 {
+  font-size: 1.3rem;
+  margin-top: 0.36rem;
+  margin-bottom: 0.36rem;
+}
+
+h4 {
+  font-size: 1.2rem;
+  margin-top: 0.34rem;
+  margin-bottom: 0.34rem;
+}
+
+
+article .header {
+  font-size: 1.4rem;
+  font-style: italic;
+  color: #555;
+}
+
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 75%;
+  max-height: 800px;
+  text-align: center;
+}
+
+img {
+	border: 0.01rem solid var(--myTextColor);
+  border-radius: 0.2rem;
+}
+
+/* Class to put two images side-by-side */
+.twoPics {
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 48%;
+}
+#images{
+   text-align:center;
+}
+
+
+/* code in text */
+code {
+  font-family: 'Inconsolata', monaco, monospace;
+	background: var(--myCodeColor);
+  border-radius: 0.2rem;
+  padding: 1px 2px;
+}
+
+/* code in code blocks */
+div.sourceCode {
+  padding: 8px 0px 5px 10px;
+	background: var(--myCodeColor);
+  border-radius: 0.5rem;
+}
+/* overwrite padding behaviour for code blocks
+   else the first line will be padded twice */
+code.sourceCode {
+	padding: 0px;
+}
+
+/* style of the blog title */
+.logo {
+  text-align: center;
+	padding: 0px;
+	margin: 0px;
+  left: 50%;
+}
+
+.logo a {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: var(--myTextColor);
+  text-decoration: none;
+}
+
+/* top most ruler; ruler below "mkDoku's World" */
+hr.topRuler {
+	/* border: 0.05rem solid #000; */
+	border: 0.05rem solid var(--myTextColor);
+  background: var(--myTextColor);
+	border-radius: 100px;
+	width: 100%;
+	margin: 0px;
+}
+
+/* hakyll acknowledgement */
+.hakyll {
+  font-size: 0.8rem;
+  color: #555;
+  text-align: right;
+  float: right;
+  position: relative;
+  transform: translateY(-115%);
+}
+
+.legal {
+  /* display:block; */
+  /* position:relative;
+  bottom:0;
+  text-align: center;
+  */
+  font-size: 0.8rem;
+  color: #555;
+  text-align: left;
+  float: left;
+  position: relative;
+  transform: translateY(-115%);
+}
+
+/* tags on the bottom of each post */
+.tag {
+  background: var(--myCodeColor);
+  border-radius: 4px;
+  color: var(--myTextColor);
+  margin: 2px;
+  padding: 1px;
+}
+
+/* text at bottom of posts;
+ * text surrounding tags
+ */
+footer {
+  margin-top: 2rem;
+  padding: 0.4rem 0;
+  border-top: 0.1rem solid var(--myTextColor);
+  font-size: 0.8rem;
+  color: #555;
+}
+
+/* navigation bar */
+
+/* Style the links inside the sidenav */
+#mySidenav a {
+  position: fixed; /* Position them relative to the browser window */
+  transition: 0.3s; /* Add transition on hover */
+  padding: 0.55rem; /* 15px padding */
+  width: 4.1rem; /* Set a specific width */
+  text-decoration: none; /* Remove underline */
+  font-size: 1.0rem;  /* Increase font size */
+  color: #719b34;
+  /* color: white;*/ /* White text color */
+  border-radius: 0.3rem 0.3rem 0.3rem 0.3rem; /* Rounded corners on the top right and bottom right side */
+	border: 0.01rem solid var(--myBackgroundColor);
+}
+
+#mySidenav a:hover {
+	border: 0.01rem solid #719b34;
+}
+
+/* specific elements in the sidenav */
+#home {
+  /* top: 80px; */
+  top: 2.6rem;
+  background-color: var(--myHomeColor);
+}
+
+#blog {
+  /*top: 140px;*/
+  top: 5.2rem;
+  background: var(--myBlogColor);
+}
+
+#aboutMe {
+  top: 7.8rem;
+  background: var(--myAboutColor);
+}
+
+#contact {
+  top: 10.4rem;
+  background: var(--myContactColor);
+}
+
+
+/*@media (max-width: 319px) {*/
+@media () {
+  body {
+    width: 90%;
+    margin: 0;
+    padding: 0 5%;
+  }
+  header {
+    margin: 4.2rem 0;
+    text-align: center;
+  }
+  nav {
+    margin: 0 auto 3rem;
+    text-align: center;
+  }
+  footer {
+    text-align: center;
+  }
+  nav a {
+    display: block;
+    line-height: 1.6;
+  }
+}
+
+/* some test styles */
+summary.synopsis {
+	display:block
+}
+
+details.synopsis {
+  padding: 4px;
+  background-color: #eeeeee;
+  border: double;
+  box-shadow: 1px 1px 2px #bbbbbb;
+  cursor: pointer;
+}
+
+span.synopsis {
+  color:orange
+}
+
+/* ------------------------------------------- */
+/* Fonts                                       */
+/* ------------------------------------------- */
+
+/* eb-garamond-regular - latin */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.eot'); /* IE9 Compat Modes */
+  src: local(''),
+       url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('../fonts/eb_garamond/eb-garamond-v14-latin-regular.svg#EBGaramond') format('svg'); /* Legacy iOS */
+}
+
+/* inconsolata-regular - latin */
+@font-face {
+  font-family: 'Inconsolata';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/inconsolata/inconsolata-v20-latin-regular.eot'); /* IE9 Compat Modes */
+  src: local(''),
+       url('../fonts/inconsolata/inconsolata-v20-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('../fonts/inconsolata/inconsolata-v20-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('../fonts/inconsolata/inconsolata-v20-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('../fonts/inconsolata/inconsolata-v20-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('../fonts/inconsolata/inconsolata-v20-latin-regular.svg#Inconsolata') format('svg'); /* Legacy iOS */
+}
