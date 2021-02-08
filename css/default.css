@@ -274,12 +274,9 @@ footer {
 
 /* navigation bar */
 
-#mySidenav {
-}
 
 /* Style the links inside the sidenav */
 #mySidenav a {
-  top:1.4rem;
   /* position: fixed;*/ /* Position them relative to the browser window */
   position: relative; /* Position them relative to the browser window */
   transition: 0.3s; /* Add transition on hover */
@@ -300,17 +297,21 @@ footer {
 /* specific elements in the sidenav */
 #home {
   background-color: var(--myHomeColor);
+  top: 1.5rem;
 }
 
 #blog {
+  top: 1.5rem;
   background: var(--myBlogColor);
 }
 
 #aboutMe {
+  top: 1.5rem;
   background: var(--myAboutColor);
 }
 
 #contact {
+  top: 1.5rem;
   background: var(--myContactColor);
 }
 
@@ -330,6 +331,7 @@ footer {
   }
 
   #mySidenav a {
+    left: unset;
     position: fixed; /* Position them relative to the browser window */
   }
 
@@ -337,45 +339,24 @@ footer {
   #home {
     /* top: 80px; */
     top: 2.6rem;
-    left: unset;
     background-color: var(--myHomeColor);
   }
 
   #blog {
     /*top: 140px;*/
     top: 5.2rem;
-    left: unset;
     background: var(--myBlogColor);
   }
 
   #aboutMe {
     top: 7.8rem;
-    left: unset;
     background: var(--myAboutColor);
   }
 
   #contact {
     top: 10.4rem;
-    left: unset;
     background: var(--myContactColor);
   }
-/*  header {
-    margin: 4.2rem 0;
-    text-align: center;
-  }
-*/
-/*  nav {
-    margin: 0 auto 3rem;
-    text-align: center;
-  }
-  footer {
-    text-align: center;
-  }
-  nav a {
-    display: block;
-    line-height: 1.6;
-  }
-*/
 }
 
 /* some test styles */
