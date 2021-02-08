@@ -103,18 +103,16 @@ html {
   font-family: 'EB Garamond', serif;
 }
 
-/* Some padding to center content */
-main.content {
-  padding: 2% 5% 0% 6.0rem;
-}
 
 body {
   /* text color */
   color: var(--myTextColor);
 	background-color: var(--myBackgroundColor);
 
-  margin-left: 2.5rem;
-  margin-right: 7.0rem;
+}
+
+main.content {
+  padding: 10% 0% 0% 0%;
 }
 
 /* headings */
@@ -195,12 +193,33 @@ code.sourceCode {
 	padding: 0px;
 }
 
+
+.nav {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.nav div:nth-child(1) {
+  left:0%;
+  width:24.5%;
+  display:inline-block;
+}
+
+.nav div:nth-child(2) {
+  left:50%;
+  width:50%;
+  display:inline-block;
+}
+
+.nav div:nth-child(3) {
+  left:75%;
+  width:24.5%;
+  display:inline-block;
+}
+
 /* style of the blog title */
 .logo {
   text-align: center;
-	padding: 0px;
-	margin: 0px;
-  left: 50%;
 }
 
 .logo a {
@@ -208,6 +227,19 @@ code.sourceCode {
   font-weight: bold;
   color: var(--myTextColor);
   text-decoration: none;
+}
+
+/* hakyll acknowledgement */
+.hakyll {
+  font-size: 0.8rem;
+  color: #555;
+  text-align: right;
+  }
+
+.legal {
+  font-size: 0.8rem;
+  color: #555;
+  text-align:left;
 }
 
 /* top most ruler; ruler below "mkDoku's World" */
@@ -218,30 +250,6 @@ hr.topRuler {
 	border-radius: 100px;
 	width: 100%;
 	margin: 0px;
-}
-
-/* hakyll acknowledgement */
-.hakyll {
-  font-size: 0.8rem;
-  color: #555;
-  text-align: right;
-  float: right;
-  position: relative;
-  transform: translateY(-115%);
-}
-
-.legal {
-  /* display:block; */
-  /* position:relative;
-  bottom:0;
-  text-align: center;
-  */
-  font-size: 0.8rem;
-  color: #555;
-  text-align: left;
-  float: left;
-  position: relative;
-  transform: translateY(-115%);
 }
 
 /* tags on the bottom of each post */
@@ -266,9 +274,14 @@ footer {
 
 /* navigation bar */
 
+#mySidenav {
+}
+
 /* Style the links inside the sidenav */
 #mySidenav a {
-  position: fixed; /* Position them relative to the browser window */
+  top:1.4rem;
+  /* position: fixed;*/ /* Position them relative to the browser window */
+  position: relative; /* Position them relative to the browser window */
   transition: 0.3s; /* Add transition on hover */
   padding: 0.55rem; /* 15px padding */
   width: 4.1rem; /* Set a specific width */
@@ -286,40 +299,72 @@ footer {
 
 /* specific elements in the sidenav */
 #home {
-  /* top: 80px; */
-  top: 2.6rem;
   background-color: var(--myHomeColor);
 }
 
 #blog {
-  /*top: 140px;*/
-  top: 5.2rem;
   background: var(--myBlogColor);
 }
 
 #aboutMe {
-  top: 7.8rem;
   background: var(--myAboutColor);
 }
 
 #contact {
-  top: 10.4rem;
   background: var(--myContactColor);
 }
 
 
 /*@media (max-width: 319px) {*/
-@media () {
+@media (min-width:640px) {
+
+  /* Some padding to center content */
+  main.content {
+    padding: 2% 5% 0% 6.0rem;
+  }
+
   body {
     width: 90%;
-    margin: 0;
-    padding: 0 5%;
+    margin-left: 2.5rem;
+    margin-right: 7.0rem;
   }
-  header {
+
+  #mySidenav a {
+    position: fixed; /* Position them relative to the browser window */
+  }
+
+  /* specific elements in the sidenav */
+  #home {
+    /* top: 80px; */
+    top: 2.6rem;
+    left: unset;
+    background-color: var(--myHomeColor);
+  }
+
+  #blog {
+    /*top: 140px;*/
+    top: 5.2rem;
+    left: unset;
+    background: var(--myBlogColor);
+  }
+
+  #aboutMe {
+    top: 7.8rem;
+    left: unset;
+    background: var(--myAboutColor);
+  }
+
+  #contact {
+    top: 10.4rem;
+    left: unset;
+    background: var(--myContactColor);
+  }
+/*  header {
     margin: 4.2rem 0;
     text-align: center;
   }
-  nav {
+*/
+/*  nav {
     margin: 0 auto 3rem;
     text-align: center;
   }
@@ -330,6 +375,7 @@ footer {
     display: block;
     line-height: 1.6;
   }
+*/
 }
 
 /* some test styles */
