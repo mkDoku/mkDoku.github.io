@@ -25,7 +25,7 @@ library [`reanimate`](https://reanimate.github.io/).
 
 For this blog post we use:
 
-  * [stack](https://docs.haskellstack.org/en/stable/README/) for building our program (lts-16-6)
+  * [stack](https://docs.haskellstack.org/en/stable/README/) for building our program (lts-16.6)
   * [reanimate-1.0.0.0](https://hackage.haskell.org/package/reanimate-1.0.0.0)
 
 ### Setting up the project
