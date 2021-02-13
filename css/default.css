@@ -338,23 +338,23 @@ footer {
   /* specific elements in the sidenav */
   #home {
     /* top: 80px; */
-    top: 2.6rem;
+    top: 3.0rem;
     background-color: var(--myHomeColor);
   }
 
   #blog {
     /*top: 140px;*/
-    top: 5.2rem;
+    top: 5.6rem;
     background: var(--myBlogColor);
   }
 
   #aboutMe {
-    top: 7.8rem;
+    top: 8.2rem;
     background: var(--myAboutColor);
   }
 
   #contact {
-    top: 10.4rem;
+    top: 10.8rem;
     background: var(--myContactColor);
   }
 }
