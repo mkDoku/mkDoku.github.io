@@ -1,0 +1,351 @@
+<!doctype html>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> Reanimate 02 - Coordinate systems and Scene </title>
+
+    <link rel="stylesheet" href="../css/default.css" />
+    <link rel="stylesheet" href="../css/syntax.css" />
+    <link rel="icon" href="../images/aboutMe/me16x16.png" type="image/x-icon" />
+  </head>
+
+  <body>
+    <header>
+
+      <div class="nav">
+        <div class="legal"> © 2021 <br> Sascha Bubeck </div>
+        <div class="logo">
+          <a href="../">mkDoku's World</a>
+        </div>
+        <div class="hakyll">
+          <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+          inside
+        </div>
+        <hr class="topRuler"> </hr>
+      </div>
+
+      <div id="mySidenav" class="sidenav">
+        <a href="../" id="home">Home</a>
+        <a href="../about.html" id="aboutMe">About Me</a>
+        <a href="../blog.html" id="blog">Blog</a>
+        <a href="../contact.html" id="contact">Contact</a>
+      </div>
+    </header>
+
+
+    <main class="content">
+      <h1>Reanimate 02 - Coordinate systems and Scene</h1>
+      <article>
+
+  <section class="content">
+      <p>In this part of the <a href="https://reanimate.github.io/"><code>reanimate</code></a> blog post series we will:</p>
+<ul>
+<li>improve the shape of the star using coordinate transformations</li>
+<li>learn to move the star using <code>Scene</code> and <code>Var</code></li>
+</ul>
+<p>For understanding the mathematical nature of the star (pentagram), we will start with a short detour about coordinate systems.</p>
+<h2 id="all-posts-of-this-series">All posts of this series</h2>
+<ul>
+<li><a href="../posts/2020-12-23-reanimate-01.html">01 - Installation, Lines and Animation</a></li>
+<li><a href="../posts/2021-01-31-reanimate-02.html">02 - Coordinate systems and Scene</a></li>
+</ul>
+<h2 id="set-up">Set-up</h2>
+<h3 id="reproducibility">Reproducibility</h3>
+<p>For this blog post we use:</p>
+<ul>
+<li><a href="https://docs.haskellstack.org/en/stable/README/">stack</a> as build system (lts-16.6)</li>
+<li><a href="https://hackage.haskell.org/package/reanimate-1.0.0.0">reanimate-1.0.0.0</a></li>
+</ul>
+<p>The only change in our files will be an additional library (<a href="https://hackage.haskell.org/package/linear"><code>linear</code></a>). This library allows for expressing our 2D coordinates as a 2D vector.<br />
+Thus, the following parts of our files will change:</p>
+<p><code>reanimateMe.cabal</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="at">  </span><span class="fu">build-depends</span><span class="kw">:</span><span class="at">       base &gt;= 4.7 &amp;&amp; &lt; 5</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="at">                     , reanimate-1.0.0.0</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="at">                     , reanimate-svg</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="at">                     , linear</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a><span class="at">                     , text</span></span></code></pre></div>
+<p>Furthermore, the imports (in <code>./src/Main.hs</code>) will look like this <strong>throughout</strong> the blog post:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="pp">#!/usr/bin/env stack</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co">-- stack runghc --package reanimate</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="kw">module</span> <span class="dt">Main</span> ( main ) <span class="kw">where</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Reanimate</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Reanimate.Builtin.Documentation</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="co">-- to describe (x,y) coordinates as 2D-vector</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Linear.V2</span></span></code></pre></div>
+<h2 id="make-our-star-great-again">Make our star great again</h2>
+<h3 id="what-happend-last-time">What happend last time</h3>
+<p>In the <a href="../posts/2021-01-04-reanimate-01.html">last part of the series</a> we created these two animations:</p>
+<p><img class="twoPics" src="../images/reanimateMe/chainTandThen.gif" alt="static line" title="A static line"> <img class="twoPics" src="../images/reanimateMe/chainTparASlow.gif" alt="static line" title="A static line"></p>
+<p>In these animations the star does not look as symmetric as you might expect from a star.<br />
+Because of this, we want to generate a ‘static’ animation of a symmetric star like this:</p>
+<p><img class="center" src="../images/reanimateMe02/StaticStarRotated.gif" alt="static symmetric star/pentagram" title="Symmetric star"></p>
+<p>But how do we obtain the coordinates of the edges of the star/pentagram?</p>
+<h3 id="cartesian-and-polar-coordinates">Cartesian and polar coordinates</h3>
+<p><strong>Disclaimer</strong>: Everything discussed in this blog post is about two-dimensional (2D) coordinate systems, because this is all we need for our journey through <a href="https://reanimate.github.io/"><code>reanimate</code></a>.</p>
+<p>As you might know, there are different types of coordinate systems in mathematics. The most well-known coordinate system is the <a href="https://en.wikipedia.org/wiki/Cartesian_coordinate_system">Cartesian coordinate system</a>, in which the 2D-coordinate of a point is described along a <span class="math inline">\(x\)</span>- and <span class="math inline">\(y\)</span>-axis:</p>
+<p><img class="center" src="../images/reanimateMe02/PointCartesian.gif" alt="static symmetric star/pentagram" title="Symmetric star"></p>
+<p>Alternatively, the position of a point can be described using the so-called <a href="https://en.wikipedia.org/wiki/Polar_coordinate_system">polar coordinate system</a>, or short polar coordinates. This coordinate system uses the distance from the center <span class="math inline">\(r\)</span> and an angle <span class="math inline">\(\phi\)</span>, which rotates the distance around the center:</p>
+<p><img class="center" src="../images/reanimateMe02/PointPolar.gif" alt="static symmetric star/pentagram" title="Symmetric star"></p>
+<p>But why should we use something other than the Cartesian coordinates, which we are already familiar with since math classes in school?</p>
+<p>Well, some equations are more handy to solve in polar coordinates. Sometimes it is just easier to imagine what we want to express in polar coordinates. This will become clear in this blog post, where we will be using polar coordinates to obtain the edges of a pentagram.<br />
+Importantly, <a href="https://reanimate.github.io/"><code>reanimate</code></a> expects Cartesian coordinates as input. Hence, we need functions to transform between both coordinate systems.</p>
+<h3 id="transforming-between-both-coordinate-systems">Transforming between both coordinate systems</h3>
+<p>Here are the equations, which are needed for such transformation:</p>
+<p><span class="math display">\[\begin{align*}
+x &amp;= r \cdot \cos(\phi) \\
+y &amp;= r \cdot \sin(\phi)
+\end{align*}\]</span></p>
+<p>So, for a given angle <span class="math inline">\(\phi\)</span> and a length <span class="math inline">\(r\)</span> we can calculate the <span class="math inline">\((x,y)\)</span>-coordinate of our point in space.</p>
+<p>“Okay, okay! But this is a blog post about Haskell and <a href="https://reanimate.github.io/"><code>reanimate</code></a>. Where is some code?”, the impatient reader might wonder.<br />
+Let’s put this equation in some code for a later use.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co">-- Transform polar coordinates to Cartesian coordinates</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="co">-- (arbitrary length)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="ot">fromPolar ::</span> <span class="dt">Floating</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">V2</span> a</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>fromPolar r ang <span class="ot">=</span> <span class="dt">V2</span> x y</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>    x <span class="ot">=</span> r <span class="op">*</span> <span class="fu">cos</span>( fromDegrees ang )</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>    y <span class="ot">=</span> r <span class="op">*</span> <span class="fu">sin</span>( fromDegrees ang )</span></code></pre></div>
+<p>The above code takes <span class="math inline">\(r\)</span> and <span class="math inline">\(\phi\)</span> as arguments (polar coordinates) and returns a two-dimensional vector in Cartesian coordinates. We use <code>V2 x y</code> instead of <code>(x,y)</code>, because it is a bit more convenient and learning something new is always fun. Don’t you think so, too? I first encountered this in the <a href="https://reanimate.readthedocs.io/en/latest/introduction/"><code>reanimate</code> read-the-docs</a>.<br />
+Unfortunately, trigonometric functions in Haskell take arguments in <a href="https://en.wikipedia.org/wiki/Radian">radian</a>. So we have to transform <span class="math inline">\(\phi\)</span> from degrees (°) into radian using <code>fromDegrees</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="co">-- Transform from degrees to radian</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="ot">fromDegrees ::</span> <span class="dt">Floating</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> a</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a>fromDegrees deg <span class="ot">=</span> deg <span class="op">*</span> <span class="fu">pi</span> <span class="op">/</span> <span class="dv">180</span></span></code></pre></div>
+<p>Additionally, we only want to work with values on the unit circle, i.e. a circle with <span class="math inline">\(r = 1\)</span>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="co">-- Transform polar coordinates to Cartesian coordinates (unit circle)</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="ot">fromPolarU ::</span> <span class="dt">Floating</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">V2</span> a</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a>fromPolarU <span class="ot">=</span> fromPolar <span class="dv">1</span></span></code></pre></div>
+<h2 id="vertices-of-a-pentagram">Vertices of a pentagram</h2>
+<p>Now that we know what Cartesian and polar coordinates are, we are ready to think about the vertices of a pentagram.<br />
+Do you remember, when I was mentioning that some problems are easier to solve in polar coordinates? Finding the vertices of a star is such case. Since we are only interested in finding coordinates on the unit circle (<span class="math inline">\(r = 1\)</span>), we only have to worry about one variable - <span class="math inline">\(\phi\)</span>. <span class="math inline">\(\phi\)</span> is an angle and thus it is periodic with a period of 360 degrees (°). Hence, the only interval that matters is <span class="math inline">\(\phi \in\)</span> [0°, 360°]. With this in mind, we can divide the maximum value of the interval, i.e. 360°, by five to obtain the step size separating the five vertices of the star. Thus, these five coordinates will be separated by 72°, which is implemented like this:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ot">coordinatesInPolar ::</span> [<span class="dt">Double</span>]</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>coordinatesInPolar <span class="ot">=</span> [<span class="dv">72</span>, <span class="dv">144</span>, <span class="dv">216</span>, <span class="dv">288</span>, <span class="dv">360</span>]</span></code></pre></div>
+<p>This may all seems a little bit abstract and complicated. Have a look at the following animation (<a href="https://github.com/mkDoku/animationOfPentagram">github-repository</a>) to <strong>see</strong> how the coordinates of the vertices can be obtained:</p>
+<p><img class="center" src="../images/reanimateMe02/Pentagram.gif" alt="A visual demonstration (gif) of how to obtain the edges of a pentagram using polar
+     coordinates on a unit circle. Scene 1: One (red) dot follows along the unit circle
+     and stops every 72 degrees. At each stop a static dot is created. Near this dot the
+     coordinates in Cartesian coordinates are given in text form. Additionally, A table,
+     which is located on the right hand side of the gif, which gets expanded with a tuple
+     of the angle, the x and the y coordinate. Scene 2: The unit circle disappeares and
+     the static dots remain. Along these static dots lines are drawn, which form a
+     pentagram. The table with the coordinate values remain on the right hand side. The
+     pentagram is rotated by 90 degrees after a short pause. The values in the table
+     change accordingly. The final frame depict the pentagram and the correspoding
+     coordinate values." title="How to obtain the coordinates of the vertices of a pentagram"></p>
+<p>In this animation you can see, how we “walk” along the unit circle, stop every 72° and add the Cartesian coordinates to our table. After that, we connect the vertices of the start in a certain sequence.<br />
+Let’s try to obtain a symmetric star.</p>
+<h3 id="first-try">First try</h3>
+<p>Now that we have defined our coordinates of the vertices in polar coordinates (<code>coordinatesInPolar</code>), we can transform these coordinates into Cartesian coordinates using the <code>fromPolarU</code> function:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ot">coordinatesCartesian ::</span> <span class="dt">V2</span> <span class="dt">Double</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>coordinatesCartesian <span class="ot">=</span> fromPolarU <span class="op">&lt;$&gt;</span> coordinatesPolar</span></code></pre></div>
+<p>And voilà, we have the Cartesian coordinates of the five vertices. To animate these coordinates in a static frame, we use the <code>mkLinePathClosed</code> function. Unfortunately, using this function in combination with <code>coordinatesCartesian</code>, results in the following animation:</p>
+<p><img class="center" src="../images/reanimateMe02/incorrect.gif" alt title="Incorrect pentagram"></p>
+<p>In this animation the five vertices are located at the correct position; the lines, however, are not connected in the correct way. Let’s fix this!</p>
+<h3 id="connection-matters">Connection matters</h3>
+<p>To draw our star in the correct way, we have to rearrange our list. As you have seen before in the animation of the vertices, we have to connect the coordinates (in polar coordinates) like this:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="ex">72</span>  -<span class="op">&gt;</span> 216</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="ex">216</span> -<span class="op">&gt;</span> 360</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="ex">360</span> -<span class="op">&gt;</span> 144</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a><span class="ex">144</span> -<span class="op">&gt;</span> 288</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a><span class="ex">288</span> -<span class="op">&gt;</span> 72 # this will be done by <span class="kw">`</span><span class="ex">mkLinePathClosed</span><span class="kw">`</span></span></code></pre></div>
+<p>With all this in mind, we can define some polar coordinates in the correct order:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="ot">coordsInPolarRearranged ::</span> [<span class="dt">Double</span>]</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>coordsInPolarRearranged <span class="ot">=</span> [<span class="dv">72</span>, <span class="dv">216</span>, <span class="dv">360</span>, <span class="dv">144</span>, <span class="dv">288</span>]</span></code></pre></div>
+<p>With the correct sequence of polar coordinates at hand, we can implement a function, which returns the star as a <code>SVG</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="ot">staticStar ::</span> <span class="dt">SVG</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>staticStar <span class="ot">=</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a>    withStrokeWidth <span class="fl">0.01</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true"></a>  <span class="op">$</span> mkLinePathClosed coordsCartesianRearranged</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true"></a>    coordsCartesianRearranged <span class="ot">=</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true"></a>      transformCoord <span class="op">.</span> fromPolarU <span class="op">&lt;$&gt;</span> coordsInPolarRearranged</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a>    transformCoord (<span class="dt">V2</span> x y)   <span class="ot">=</span> (x,y)</span></code></pre></div>
+<p>In this function each entry of the list <code>coordsInPolarRearranged</code> is modified using <code>fromPolarU</code> and <code>transformCoord</code> to obtain a list of vertices in Cartesian coordinates. These coordinates are then used to create a <code>SVG</code> using <code>mkLinePathClosed</code>. <code>withStrokeWidth</code> allows us to modify the stroke width of our <code>SVG</code>.<br />
+Let’s plug it into <code>reanimate</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="ot">main ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a>main <span class="ot">=</span> reanimate</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true"></a>  <span class="op">$</span> docEnv</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true"></a>  <span class="op">$</span> staticFrame (<span class="dv">3</span><span class="op">/</span><span class="dv">60</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true"></a>  <span class="op">$</span> staticStar</span></code></pre></div>
+<p>Here we use <code>staticFrame (3/60)</code> instead of <code>staticFrame 1</code> to only produce three frames in the output format (<code>.gif</code> or <code>.mp4</code>). This will reduce the size of the animation significantly. For <code>.gif</code> the minimum number of frames is <code>3</code>, while for <code>.mp4</code> <code>1</code> would be possible, too.<br />
+The above code will result in the following animation:</p>
+<p><img class="center" src="../images/reanimateMe02/staticStar.gif" alt title="First static star"></p>
+<h3 id="changing-the-view">Changing the view</h3>
+<p>Unfortunately, our star is too small. We have two options to change the size of the star.<br />
+We could use the <code>scale</code> function, which scales a <code>SVG</code>, or we can change the view on the star using so-called <a href="https://reanimate.readthedocs.io/en/latest/introduction/#custom-viewboxes">viewboxes</a>. While <code>scale</code> would only affect one <code>SVG</code> in the animation (here: the star), <code>withViewBox</code> will change the overall aspect ratio and coordinates of the whole animation. Imagine the latter to be like the zoom of a camera, making the object appear smaller or bigger without affecting the actual size of the object. Let’s use this “zoom” function to change the view.<br />
+Keep in mind, that the default units of the coordinate system are 16 and 9 for the x- and y-coordinate, respectively.<br />
+Since the vertices of the star are positioned on a unit circle (<span class="math inline">\(r = 1\)</span>), changing the viewbox to a width and a height of three would create a sufficient zoom on the star. This would result in an aspect ratio of 1:1, but we want a 16:9 aspect ratio. Thus, we have to multiple the <span class="math inline">\(x\)</span> values by 16/9.</p>
+<p>With this in mind, we can modify the above code by adding <code>withViewBox</code> to change the view on the animation:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="ot">ratio ::</span> <span class="dt">Double</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a>ratio <span class="ot">=</span> <span class="dv">16</span><span class="op">/</span><span class="dv">9</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a><span class="ot">main ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a>main <span class="ot">=</span> reanimate</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true"></a>  <span class="op">$</span> docEnv</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true"></a>  <span class="op">$</span> mapA (withViewBox (<span class="op">-</span><span class="fl">1.5</span><span class="op">*</span>ratio, <span class="op">-</span><span class="fl">1.5</span>, <span class="dv">3</span><span class="op">*</span>ratio, <span class="dv">3</span>))</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true"></a>  <span class="op">$</span> staticFrame (<span class="dv">3</span><span class="op">/</span><span class="dv">60</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true"></a>  <span class="op">$</span> staticStar</span></code></pre></div>
+<p>The result will look like this:</p>
+<p><img class="center" src="../images/reanimateMe02/staticStarView.gif" alt title="First static star"></p>
+<h3 id="finishing-touches">Finishing touches</h3>
+<p>“The star is crooked - no vertex is pointing upwards!”, you might say. To fix this, let’s add 90 degrees <code>(+90)</code> to all polar coordinates to rotate our star.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="ot">staticStar ::</span> <span class="dt">SVG</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a>staticStar <span class="ot">=</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a>    withStrokeWidth <span class="fl">0.01</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a>  <span class="op">$</span> mkLinePathClosed coordsCartesianRearranged</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true"></a>    coordsCartesianRearranged <span class="ot">=</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true"></a>      transformCoord <span class="op">.</span> fromPolarU <span class="op">.</span> (<span class="op">+</span><span class="dv">90</span>) <span class="op">&lt;$&gt;</span> coordsInPolarRearranged</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true"></a>    transformCoord (<span class="dt">V2</span> x y)   <span class="ot">=</span> (x,y)</span></code></pre></div>
+<p>Look at this beautiful rotated star!</p>
+<p><img class="center" src="../images/reanimateMe02/staticStar90.gif" alt title="First static star"></p>
+<h2 id="hollywood-star">Hollywood star</h2>
+<p>In this second half of the blog post, we want to do bring our star to life. Yeah! Finally! To do so, we will use the <code>Scene</code> monad and variables called <code>Var</code>. <code>Scene</code> allows to create complex setups for animations.</p>
+<p>But what actually is the difference between a <code>Scene</code> and an <code>Animation</code>?</p>
+<h3 id="animation-vs-scene"><code>Animation</code> vs <code>Scene</code></h3>
+<p>As you might remember, the function <code>reanimate</code>, which creates an output (<code>.gif</code> or <code>.mp4</code>), takes <code>Animation</code> as input. Hence, we cannot write <a href="https://reanimate.github.io/"><code>reanimate</code></a> animations without <code>Animation</code> (Duh!).<br />
+From the <a href="https://hackage.haskell.org/package/reanimate-1.0.0.0/docs/Reanimate.html#t:Animation">API documentation</a> we learn that <code>Animation</code> is a data type, which describes an <code>SVG</code> over a finite time. A <a href="https://hackage.haskell.org/package/reanimate-1.0.0.0/docs/Reanimate.html#t:Scene"><code>Scene</code></a>, on the other hand describes “a sequence of animations and variables that change over time”. Importantly, <code>Scene</code> is a <code>Monad</code>, making it more powerful than <code>Animation</code>.</p>
+<p>“But wait! What is <code>Scene</code> useful for, if <code>reanimate</code> requires <code>Animation</code> as input anyway?” This is a good question. <code>Scene</code> is powerful for arranging <code>Animation</code>s in any desired way. Then, you can combine the complex <code>Scene</code>s into an overall <code>Animation</code>, which can be rendered by <code>reanimate</code>. Additionally, <code>Scene</code> enables the use of <code>Var</code>, which are variables that can change dynamically (over time) and influence the behavior of our <code>SVG</code>/<code>Animation</code>.</p>
+<p>Enough talking! Let’s (re)animate!</p>
+<h3 id="how-to-use-scene">How to use <code>Scene</code></h3>
+<p>First, we need to discuss how to incorporate a <code>Scene</code> into our code. <code>scene</code> (lower case) is a function, which takes a <code>Scene</code> and transforms it into an <code>Animation</code>, that can then be passed to <code>reanimate</code>. Hence, instead of “working” with <code>Animation</code>, we can work with <code>scene Scene</code> like this:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="ot">main ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a>main <span class="ot">=</span> reanimate</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true"></a>  <span class="op">$</span> docEnv</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true"></a>  <span class="op">$</span> mapA (withViewBox (<span class="op">-</span><span class="fl">1.5</span><span class="op">*</span>ratio, <span class="op">-</span><span class="fl">1.5</span>, <span class="dv">3</span><span class="op">*</span>ratio, <span class="dv">3</span>))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true"></a>  <span class="op">$</span> scene firstScene</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true"></a><span class="ot">firstScene ::</span> <span class="dt">Scene</span> s ()</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true"></a>firstScene <span class="ot">=</span> <span class="fu">undefined</span> <span class="co">-- our first scene comes here</span></span></code></pre></div>
+<h3 id="starting-small">Starting small</h3>
+<p>To start simple, we will animate a single dot (a filled circle) to familiarize ourselves with <code>Var</code>s. This dot, given a coordinate <code>V2 Double</code> as argument, can be defined as follows:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="ot">dot ::</span> <span class="dt">V2</span> <span class="dt">Double</span> <span class="ot">-&gt;</span> <span class="dt">SVG</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a>dot (<span class="dt">V2</span> x y) <span class="ot">=</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true"></a>    translate x y</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true"></a>  <span class="op">$</span> withFillOpacity <span class="dv">1</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true"></a>  <span class="op">$</span> withFillColor   <span class="st">&quot;blue&quot;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true"></a>  <span class="op">$</span> withStrokeColor <span class="st">&quot;white&quot;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true"></a>  <span class="op">$</span> mkCircle <span class="fl">0.02</span></span></code></pre></div>
+<p>We use <code>mkCircle</code> to define a circle, which is modified by <code>withStrokeColor</code>, <code>withFillColor</code> and <code>withFillOpacity</code> to represent a dot. <code>translate</code> allows us to place the dot at a specific Cartesian coordinate.<br />
+Animating the dot will look like this:</p>
+<p><img class="center" src="../images/reanimateMe02/staticDot.gif" alt title="A static blue dot"></p>
+<p>To generate the dot within the <code>Scene</code>, we use:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="ot">firstScene ::</span> <span class="dt">Scene</span> s ()</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a>firstScene <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a>  newSpriteSVG_ <span class="op">$</span> dot (fromPolarU <span class="dv">0</span>)</span></code></pre></div>
+<p>Look how short the code for this scene is - just one line! We generate a <code>Sprite</code> from a <code>SVG</code> using <code>newSpriteSVG_</code>. This <code>Sprite</code> is displayed in our scene right after the creation.<br />
+The underscore (<code>_</code>) in <code>newSpriteSVG_</code> tells the compiler to “throw away” the result of this computation. This means that the <code>Sprite</code> is created but cannot be addressed in the <code>Scene</code>.</p>
+<p>This was our first task using <code>Scene</code>. Now let us move the dot. Hopefully, you are as excited as I am!</p>
+<h3 id="spicing-up-our-scene-with-var">Spicing up our <code>Scene</code> with <code>Var</code></h3>
+<p>Besides <code>newSpriteSVG_</code>, there is also <code>newSprite_</code>, which generates a <code>Sprite</code> from a so-called frame generator <code>Frame s SVG</code>. This frame generator will act like a <code>SVG</code>, but has a variable <code>Var</code> attached to it. This assigned variable allows for some dynamic change in the animation.<br />
+Let’s see this in action. First, we want to define a <code>Var</code> using the <code>newVar</code> function, which describes the location of our dot:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true"></a>secondScene <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true"></a>  currentPosition <span class="ot">&lt;-</span> newVar <span class="op">$</span> fromPolarU <span class="dv">0</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true"></a>  newSprite_ <span class="op">$</span> dot <span class="op">&lt;$&gt;</span> unVar currentPosition</span></code></pre></div>
+<p>Although this code looks different than <code>firstScene</code> (previous section), the resulting animation will look the same. The only change in the code for <code>secondScene</code> is that our <code>Sprite</code> has a <code>Var</code> attached to it. We can modify this <code>Var</code> that represents the location of the dot throughout the <code>Scene</code>.<br />
+The <code>Var</code>, which is used to create the <code>Sprite</code> of the dot, will not be consumed. Hence, we could attach this <code>Var</code> to other <code>Sprite</code>s.</p>
+<p>Now let’s change the position of the dot by introducing the function <code>moveDot</code>, which interacts with the variable <code>currentPosition</code>:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true"></a><span class="ot">secondScene ::</span> <span class="dt">Scene</span> s ()</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true"></a>secondScene <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true"></a>  currentPosition <span class="ot">&lt;-</span> newVar <span class="op">$</span> fromPolarU <span class="dv">0</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true"></a>  newSprite_ <span class="op">$</span> dot <span class="op">&lt;$&gt;</span> unVar currentPosition</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true"></a>  wait <span class="dv">1</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true"></a>  <span class="kw">let</span> moveDot newPos <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true"></a>      writeVar currentPosition newPos</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true"></a>      wait <span class="dv">1</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">72</span>)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">144</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">216</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">288</span>)</span></code></pre></div>
+<p>We define <code>moveDot</code> within a <code>let</code>-statement, so that we can use the variable <code>currentPosition</code>, which belongs to the whole <code>Scene</code>. Within <code>moveDot</code>, the current value of the variable <code>currentPosition</code> is overwritten by <code>writeVar</code> using the values of the argument <code>newPos</code>.<br />
+The final result will look like this:</p>
+<p><img class="center" src="../images/reanimateMe02/jumpingDot.gif" alt title="A jumping blue dot"></p>
+<h3 id="tweenvar-makes-it-run-smooth"><code>tweenVar</code> makes it run smooth</h3>
+<p>The jumping dot of the last section is not that pleasing to look at. Let’s try to smoothly move the dot along a line instead of jumping around.<br />
+For this, the only thing we have to change is the <code>moveDot</code> function. Let’s do this in another <code>Scene</code>:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true"></a><span class="ot">thirdScene ::</span> <span class="dt">Scene</span> s ()</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true"></a>thirdScene <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true"></a>  currentPosition <span class="ot">&lt;-</span> newVar <span class="op">$</span> fromPolarU <span class="dv">0</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true"></a>  newSprite_ <span class="op">$</span> dot <span class="op">&lt;$&gt;</span> unVar currentPosition</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true"></a>  wait <span class="dv">1</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true"></a>  <span class="kw">let</span> moveDot (<span class="dt">V2</span> x' y') <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true"></a>      (<span class="dt">V2</span> x y) <span class="ot">&lt;-</span> readVar currentPosition</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true"></a>      <span class="kw">let</span> (deltaX, deltaY) <span class="ot">=</span> (x'<span class="op">-</span>x, y'<span class="op">-</span>y)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true"></a>      tweenVar currentPosition <span class="dv">2</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true"></a>        <span class="op">$</span> \_ t <span class="ot">-&gt;</span> <span class="dt">V2</span> (x<span class="op">+</span>deltaX<span class="op">*</span>t) (y<span class="op">+</span>deltaY<span class="op">*</span>t)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true"></a>      wait <span class="dv">1</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true"></a></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">72</span>)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">144</span>)</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">216</span>)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">288</span>)</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true"></a>  moveDot (fromPolarU <span class="dv">360</span>)</span></code></pre></div>
+<p>There is a lot happening in the new version of <code>moveDot</code>. Let me guide you through it:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true"></a><span class="kw">let</span> moveDot (<span class="dt">V2</span> x' y') <span class="ot">=</span> <span class="kw">do</span></span></code></pre></div>
+<p>First, we pattern match the argument to obtain <span class="math inline">\(x'\)</span> and <span class="math inline">\(y'\)</span>, the final x and y values of the final coordinate (in Cartesian coordinates).</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true"></a>    (<span class="dt">V2</span> x y) <span class="ot">&lt;-</span> readVar currentPosition</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true"></a>    <span class="kw">let</span> (deltaX, deltaY) <span class="ot">=</span> (x'<span class="op">-</span>x, y'<span class="op">-</span>y)</span></code></pre></div>
+<p>Second, we read the current position from the variable <code>currentPosition</code> and pattern match to obtain <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>. After that, we calculate the difference of the old and new x and y values (<span class="math inline">\(\Delta x = x'-x\)</span> and <span class="math inline">\(\Delta y = y'-y\)</span>), which will come in handy in the next line(s).</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true"></a>    tweenVar currentPosition <span class="dv">2</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true"></a>      <span class="op">$</span> \_ t <span class="ot">-&gt;</span> <span class="dt">V2</span> (x<span class="op">+</span>deltaX<span class="op">*</span>t) (y<span class="op">+</span>deltaY<span class="op">*</span>t)</span></code></pre></div>
+<p>Third, we modify the <code>currentPosition</code> variable over a time frame of <code>2</code> seconds (120 Frames). This is done using the <code>tweenVar</code> function, which takes a <code>Var</code>, <code>Duration</code> and a custom function to modify the passed <code>Var</code>. In our case, we add the <span class="math inline">\(\Delta x\)</span> and <span class="math inline">\(\Delta y\)</span> to the start coordinate to get a smooth transition between the two. Importantly, <code>t</code> takes values between 0 and 1, independent from the duration of the animation (in this case <code>2</code>).</p>
+<p>Finally, let’s talk about the custom function used in <code>tweenVar</code> in more detail.<br />
+It can be written as the following mathematical equation:</p>
+<p><span class="math display">\[ coord(t) = (x + \Delta x \cdot t, \quad y + \Delta y \cdot t) \]</span></p>
+<p>This equation returns the start coordinates <span class="math inline">\((x, y)\)</span>, at the beginning of the animation:</p>
+<p><span class="math display">\[ coord(0) = (x, y) \]</span></p>
+<p>But what about the end coordinates? When we pass the final time of the animation (<span class="math inline">\(t = 1\)</span>) to the equation, we obtain:</p>
+<p><span class="math display">\[ coord(1) = (x + \Delta x, \quad y + \Delta y) = (x + x' - x, \quad y + y' -y) = (x', y')\]</span></p>
+<p>Thus, the final coordinate is returned at the end of the animation. Most importantly, our return value (<span class="math inline">\(coord\)</span>) will produce coordinates for a smooth transition for every value between <span class="math inline">\(t = 0\)</span> and <span class="math inline">\(t = 1\)</span>:</p>
+<p><img class="center" src="../images/reanimateMe02/smoothDot.gif" alt title="A smooth moving dot"></p>
+<p>Nice! As you can see, the variable <code>currentPosition</code> is changed smoothly.</p>
+<h3 id="time-to-be-creative">Time to be creative</h3>
+<p>With <code>Var</code> and <code>Scene</code> at hand, there are no limits to your creativity with <a href="https://reanimate.github.io/"><code>reanimate</code></a>. How about exchanging the <code>dot</code> with a star or your favorite SVG?</p>
+<p><img class="center" src="../images/reanimateMe02/creative.gif" alt title="A smooth moving dot"></p>
+<p>Feel free to have a look at the <a href="https://github.com/mkDoku/reanimateMe02">source code</a> of this animation.</p>
+<h2 id="summary">Summary</h2>
+<p>To sum up, we learned a lot about coordinate systems and how to obtain the coordinates of a star.<br />
+Additionally, we used the following features of <a href="https://reanimate.github.io/"><code>reanimate</code></a>:</p>
+<ul>
+<li><code>withViewBox</code> to change the view onto an animation</li>
+<li><code>Var</code> to modify a <code>Scene</code> over the time</li>
+</ul>
+<p>Of course, there is a lot more to learn about <a href="https://reanimate.github.io/"><code>reanimate</code></a>. Future blog posts will follow. Stay tuned!</p>
+<h2 id="source-code">Source code</h2>
+<p>All created animations for this blog post are located in <a href="https://github.com/mkDoku/reanimateMe02">this</a> github repository. There is one exception: the lengthy animation, which demonstrates how to obtain the coordinates of the vertices and how to draw the star, is located in <a href="https://github.com/mkDoku/animationOfPentagram">this</a> github repository.<br />
+Feel free to use the code as inspiration.</p>
+  </section>
+
+  <footer class="info">
+    Posted on January 31, 2021
+
+    
+      by Sascha Bubeck
+    
+
+    
+    <br> Topics: <a href="../tags/Reanimate.html" class="tag">Reanimate</a><a href="../tags/Haskell.html" class="tag">Haskell</a><a href="../tags/Animation.html" class="tag">Animation</a>
+    
+  </footer>
+
+</article>
+
+    </main>
+
+
+  </body>
+</html>
