@@ -101,10 +101,12 @@ Because of this, we want to generate a ‘static’ animation of a symmetric sta
 Importantly, <a href="https://reanimate.github.io/"><code>reanimate</code></a> expects Cartesian coordinates as input. Hence, we need functions to transform between both coordinate systems.</p>
 <h3 id="transforming-between-both-coordinate-systems">Transforming between both coordinate systems</h3>
 <p>Here are the equations, which are needed for such transformation:</p>
-<p><span class="math display">\[\begin{align*}
+<p><span class="math display">\[
+\begin{align*}
 x &amp;= r \cdot \cos(\phi) \\
 y &amp;= r \cdot \sin(\phi)
-\end{align*}\]</span></p>
+\end{align*}
+\]</span></p>
 <p>So, for a given angle <span class="math inline">\(\phi\)</span> and a length <span class="math inline">\(r\)</span> we can calculate the <span class="math inline">\((x,y)\)</span>-coordinate of our point in space.</p>
 <p>“Okay, okay! But this is a blog post about Haskell and <a href="https://reanimate.github.io/"><code>reanimate</code></a>. Where is some code?”, the impatient reader might wonder.<br />
 Let’s put this equation in some code for a later use.</p>
