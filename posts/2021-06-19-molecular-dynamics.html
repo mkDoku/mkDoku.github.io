@@ -1,0 +1,535 @@
+<!doctype html>
+
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+
+    <title> Molecular Dynamic Simulations in Haskell </title>
+
+    <link rel="stylesheet" href="../css/default.css" />
+    <link rel="stylesheet" href="../css/syntax.css" />
+    <link rel="icon" href="../images/aboutMe/me16x16.png" type="image/x-icon" />
+  </head>
+
+  <body>
+    <header>
+
+      <div class="nav">
+        <div class="legal"> © 2021 <br> Sascha Bubeck </div>
+        <div class="logo">
+          <a href="../">mkDoku's World</a>
+        </div>
+        <div class="hakyll">
+          <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+          inside
+        </div>
+        <hr class="topRuler"> </hr>
+      </div>
+
+      <div id="mySidenav" class="sidenav">
+        <a href="../" id="home">Home</a>
+        <a href="../about.html" id="aboutMe">About Me</a>
+        <a href="../blog.html" id="blog">Blog</a>
+        <a href="../contact.html" id="contact">Contact</a>
+      </div>
+    </header>
+
+
+    <main class="content">
+      <h1>Molecular Dynamic Simulations in Haskell</h1>
+      <article>
+
+  <section class="content">
+      <p><a href="https://en.wikipedia.org/wiki/Molecular_dynamics">Molecular dynamics</a> simulations are a crucial part of a computational chemist’s tool set <a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>. They allow for understanding a chemical system with thousands of atoms or molecules. Most importantly, molecular dynamics simulations are capable of describing a system, which changes over time. This allows for understanding properties, e.g. nucleation in the vapor phase <a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>, which cannot be investigated with other non-dynamic computational methods.</p>
+<p>This blog post will teach you how to implement a straightforward molecular dynamics simulation using the programming language <a href="https://www.haskell.org">Haskell</a>. Additionally, you will learn how to visualize the dynamic behaviour of different systems. For this, we will use the Haskell library <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a>.</p>
+<p>But before implementing anything, we have to talk about molecular dynamics and the underlying mathematical equations.</p>
+<p>In the end of this post, you will be able recreate and interpret the following two simulations.</p>
+<p><img class="twoPics" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/verletSquare.gif" alt="A simulation starting with a square lattice of 4 times 4 particles" title="Square lattice simulation"> <img class="twoPics" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/verletRandom.gif" alt="A simulation of 16 particles with randomly generated positions an velocities" title="Simulation with 16 randomly placed particles"></p>
+<h2 id="set-up">Set-up</h2>
+<p>To follow the blog post step by step, you will need the following setup:</p>
+<details>
+<summary>
+Tools/Libraries
+</summary>
+<ul>
+<li><a href="https://docs.haskellstack.org/en/stable/README/">stack</a> - build system (lts-16.6)</li>
+<li><a href="https://hackage.haskell.org/package/linear">linear</a> - representation of two-dimensional vectors</li>
+<li><a href="https://hackage.haskell.org/package/gloss">gloss</a> - visualization of particles</li>
+<li><a href="https://hackage.haskell.org/package/random">random</a> - generation of pseudo-random numbers</li>
+</ul>
+</details>
+<details>
+<summary>
+<code>molecularDynamics.cabal</code>
+</summary>
+<div class="sourceCode" id="cb1"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">name</span><span class="kw">:</span><span class="at">                molecularDynamics</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="fu">version</span><span class="kw">:</span><span class="at">             </span><span class="fl">0.1.0.0</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="fu">homepage</span><span class="kw">:</span><span class="at">            https://github.com/mkDoku/molecularDynamics</span><span class="co">#readme</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="fu">license</span><span class="kw">:</span><span class="at">             BSD3</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a><span class="fu">license-file</span><span class="kw">:</span><span class="at">        LICENSE</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a><span class="fu">author</span><span class="kw">:</span><span class="at">              Sascha Bubeck</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="fu">maintainer</span><span class="kw">:</span><span class="at">          bubecksascha@t-online.de</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a><span class="fu">copyright</span><span class="kw">:</span><span class="at">           2021 Sascha Bubeck</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a><span class="fu">category</span><span class="kw">:</span><span class="at">            Simulation</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a><span class="fu">build-type</span><span class="kw">:</span><span class="at">          Simple</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a><span class="fu">cabal-version</span><span class="kw">:</span><span class="at">       &gt;=1.10</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a><span class="fu">extra-source-files</span><span class="kw">:</span><span class="at">  README.md</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a><span class="at">executable molecularDynamics</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true"></a><span class="at">  </span><span class="fu">hs-source-dirs</span><span class="kw">:</span><span class="at">      src</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true"></a><span class="at">  </span><span class="fu">main-is</span><span class="kw">:</span><span class="at">             Main.hs</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true"></a><span class="at">  </span><span class="fu">default-language</span><span class="kw">:</span><span class="at">    Haskell2010</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true"></a><span class="at">  </span><span class="fu">ghc-options</span><span class="kw">:</span><span class="at">         -O2</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true"></a><span class="at">                       -threaded</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true"></a><span class="at">                       -rtsopts</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true"></a><span class="at">                       -with-rtsopts=-N</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true"></a><span class="at">  </span><span class="fu">build-depends</span><span class="kw">:</span><span class="at">       base &gt;= 4.7 &amp;&amp; &lt; 5</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true"></a><span class="at">                     , linear</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true"></a><span class="at">                     , gloss</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true"></a><span class="at">                     , random</span></span></code></pre></div>
+</details>
+<details>
+<summary>
+<code>stack.yaml</code>
+</summary>
+<div class="sourceCode" id="cb2"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="fu">resolver</span><span class="kw">:</span><span class="at"> lts-16.6</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="fu">packages</span><span class="kw">:</span></span></code></pre></div>
+</details>
+<details>
+<summary>
+Imports in <code>Main.hs</code>
+</summary>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Graphics.Gloss</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Graphics.Gloss.Data.ViewPort</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Linear.Metric</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Linear.V2</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">Linear.Vector</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a><span class="kw">import</span>           <span class="dt">System.Random</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a><span class="co">-- |</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a><span class="co">-- Select the main function of your choice</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a><span class="co">--</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a><span class="co">--    * 'mainNewton'</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a><span class="co">--    * 'mainNewtonBounce'</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a><span class="co">--    * 'mainVerlet'</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true"></a><span class="co">--    * 'mainVerletSquare'</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true"></a><span class="co">--    * 'mainVerletRandom'</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true"></a><span class="co">--</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true"></a><span class="co">-- to perform the according simulation</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true"></a><span class="ot">main ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true"></a>main <span class="ot">=</span> <span class="fu">undefined</span></span></code></pre></div>
+</details>
+<p>Alternatively, if you don’t want to copy all the code snippets in this blog post, have a look at <a href="https://github.com/mkDoku/molecularDynamics">this repository</a>. Following the blog post step-by-step should result in a working implementation.<br />
+If you are having trouble implementing this, feel free to <a href="../contact.html">contact me</a>.</p>
+<h2 id="introduction">Introduction</h2>
+<p>In science, numerical simulations are used when it is not possible to derive an analytical solution by solely relying on mathematics. These simulations are performed on system sizes with varying sizes. Depending on the system size, a balance between accuracy and computational demand has to be struck.<br />
+<a href="https://en.wikipedia.org/wiki/Molecular_dynamics">Molecular dynamics</a> simulations, a type of numerical simulations, allow to simulate macroscopic systems like liquid and gaseous phases containing millions of particles. The simulations use the equations of <a href="https://en.wikipedia.org/wiki/Classical_mechanics">classical mechanics</a> (coined by <a href="https://en.wikipedia.org/wiki/Isaac_Newton">Isaac Newton</a>) to describe the motion of the particles. This is computationally less demanding than for instance the more accurate methods based on quantum mechanical equations.<br />
+There are various algorithms to describe the motion of particles numerically. Here, we will use the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm and the <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> library for visualizing the motion. In addition to the motion, we have to model the interaction between the particles. For this, we will use the <a href="https://en.wikipedia.org/wiki/Lennard-Jones_potential">Lennard-Jones potential</a>. While modern molecular dynamics programs use additional conditions and refined algorithms, this is the very basis of molecular dynamics simulations.</p>
+<h2 id="classical-mechanics">Classical mechanics</h2>
+<h3 id="newton-mechanics">Newton mechanics</h3>
+<p>Let’s start off with a simple system, in which the particles move independent of each other. This movement can be described by these equations of Newton’s mechanics:</p>
+<p><span class="math display">\[
+\begin{align*}
+\vec{r}_{t+\Delta t} &amp;= \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\vec{v}_{t+\Delta t} &amp;= \vec{v}_t + \vec{a}_t \cdot \Delta t \\
+\end{align*}
+\]</span></p>
+<p>Here, for a given position <span class="math inline">\(\vec{r}\)</span>, velocity <span class="math inline">\(\vec{v}\)</span> and acceleration <span class="math inline">\(\vec{a}\)</span>, we know how a particle will behave after a time step <span class="math inline">\(\Delta t\)</span>. For each time step, both the position <span class="math inline">\(\vec{r}\)</span> and the velocity <span class="math inline">\(\vec{v}\)</span> are updated. This update can be repeated over and over again, until the simulation is finished or aborted.<br />
+For now, to simplify the description of the particles, we will assume that particles are not accelerated (<span class="math inline">\(\vec{a} = \vec{0}\)</span>). With this, the above equations can be simplified to:</p>
+<p><span class="math display">\[
+\begin{align*}
+\vec{r}_{t+\Delta t} &amp;= \vec{r}_{t}+\vec{v}_t \cdot \Delta t \\
+\big( \vec{v}_{t+\Delta t} &amp;= \vec{v}_t \big)
+\end{align*}
+\]</span></p>
+<p>Without acceleration, the velocity of the particle is constant throughout the simulation and we do not need to implement the second equation.<br />
+With this in mind, let’s start implementing the equation for describing the motion of independent particles. All we need for this, are a time step <span class="math inline">\(\Delta t\)</span>, the current position <span class="math inline">\(\vec{r}_t\)</span> and velocity <span class="math inline">\(\vec{v}_t\)</span>.</p>
+<h2 id="ready-steady-go">Ready, steady, go!</h2>
+<h3 id="definitions-and-gloss">Definitions and <code>gloss</code></h3>
+<p>First, some definitions are needed to follow the implementation.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Position</span> <span class="ot">=</span> <span class="dt">V2</span> <span class="dt">Float</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Velocity</span> <span class="ot">=</span> <span class="dt">V2</span> <span class="dt">Float</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Index</span>    <span class="ot">=</span> <span class="dt">Int</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">TimeStep</span> <span class="ot">=</span> <span class="dt">Float</span></span></code></pre></div>
+<p>The position <span class="math inline">\(\vec{r}\)</span> and velocity <span class="math inline">\(\vec{v}\)</span> of the particle is represented by a two-dimensional vector using the <a href="https://hackage.haskell.org/package/linear"><code>linear</code></a> library. <code>Index</code> is used to enumerate the particles and <code>TimeStep</code> represents the time step <span class="math inline">\(\Delta t\)</span>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="kw">data</span> <span class="dt">Particle</span> <span class="ot">=</span> <span class="dt">Particle</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>  {<span class="ot"> idx ::</span> <span class="dt">Index</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="ot">    pos ::</span> <span class="dt">Position</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a><span class="ot">    vel ::</span> <span class="dt">Velocity</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a>  }</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a><span class="kw">instance</span> <span class="dt">Eq</span> <span class="dt">Particle</span> <span class="kw">where</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a>  ballA <span class="op">==</span> ballB <span class="ot">=</span> idx ballA <span class="op">==</span> idx ballB</span></code></pre></div>
+<p>The <code>Particle</code> itself consists of <code>Index</code>, <code>Position</code> and <code>Velocity</code>. To make these <code>Particle</code>s distinguishable, they are made an instance of <code>Eq</code>. With this, we can check if two particle are the same by comparing their indices.</p>
+<p><a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> allows for visualizing the ongoing simulation by providing the function <code>simulate</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ot">simulate ::</span> <span class="dt">Display</span>                               <span class="co">-- Window config</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>         <span class="ot">-&gt;</span> <span class="dt">Color</span>                                 <span class="co">-- Background color</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>         <span class="ot">-&gt;</span> <span class="dt">Int</span>                                   <span class="co">-- FPS</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>         <span class="ot">-&gt;</span> model                                 <span class="co">-- Model</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>         <span class="ot">-&gt;</span> (model <span class="ot">-&gt;</span> <span class="dt">Picture</span>)                    <span class="co">-- Draw function</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a>         <span class="ot">-&gt;</span> (<span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> model <span class="ot">-&gt;</span> model) <span class="co">-- Update function</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a>         <span class="ot">-&gt;</span> <span class="dt">IO</span> ()</span></code></pre></div>
+<p>My understanding is that <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> is designed around the Model-View-Update principle, which I know from the programming language <a href="https://en.wikipedia.org/wiki/Elm_(programming_language)">Elm</a>. This principle requires the following inputs: a model for our system, a way to draw it on screen and a way to update the model throughout the simulation. These three essential parts are discussed in the next sections and culminate in our first simulation.</p>
+<h3 id="the-model">The model</h3>
+<p>For our model we choose a list of <code>Particle</code>s.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Model</span> <span class="ot">=</span> [<span class="dt">Particle</span>]</span></code></pre></div>
+<p>This <code>Model</code> has to be initialized in the beginning of the simulation using a custom <code>initialModel</code> function.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="ot">initialModel ::</span> <span class="dt">Model</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a>initialModel <span class="ot">=</span> [<span class="dt">Particle</span> <span class="dv">1</span> (<span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span>) (<span class="dt">V2</span> <span class="fl">1.0</span> <span class="fl">0.0</span>)]</span></code></pre></div>
+<p>The first system we want to simulate is a <strong>single-particle system</strong>. Hence, we initialize the <code>Model</code> with a single <code>Particle</code> with an index of <code>1</code>, a starting position of <span class="math inline">\(\begin{pmatrix} 0 \\ 0 \end{pmatrix}\)</span> and a starting velocity of <span class="math inline">\(\begin{pmatrix} 1 \\ 0 \end{pmatrix}\)</span>. With this, the <code>Particle</code> starts at the center of the screen and moves to the right, when the simulation is running.</p>
+<h3 id="the-draw-function">The draw function</h3>
+<p>Next, we have to specify how to render (draw) the model. For this, we use the <code>drawingFunc</code> function.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="ot">drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span></code></pre></div>
+<p>Keep in mind that <code>Model</code>, provided as input, is a list of <code>Particle</code>s (<code>[Particle]</code>). The <code>drawingFunc</code> function first transforms this list of <code>Particle</code>s to a list of <code>Picture</code>s. This is done by applying the <code>drawParticle</code> function to every element of the input.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="ot">drawParticle ::</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>drawParticle (<span class="dt">Particle</span> _ (<span class="dt">V2</span> x y) _) <span class="ot">=</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a>  translate x' y' <span class="op">$</span> color (circleSolid <span class="op">$</span> toPixels dotSize)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true"></a>    x' <span class="ot">=</span> toPixels x</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true"></a>    y' <span class="ot">=</span> toPixels y</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true"></a>    color <span class="ot">=</span> <span class="dt">Color</span> (withAlpha <span class="fl">0.8</span> blue)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true"></a><span class="ot">toPixels ::</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Float</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true"></a>toPixels <span class="ot">=</span> (<span class="op">*</span> <span class="fl">100.0</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true"></a><span class="ot">dotSize ::</span> <span class="dt">Float</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true"></a>dotSize <span class="ot">=</span> <span class="fl">0.1</span></span></code></pre></div>
+<p>Here, a blue (<code>blue</code>) circle (<code>circleSolid</code>) is generated and positioned (<code>translate</code>) using the <code>Position</code> (<span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span> coordinates) of the <code>Particle</code>, which was provided to the function as argument. <code>toPixels</code> is needed to transform the <code>Position</code> from “real world units” to pixels, which represent the coordinates on the screen. By applying this function to every element of the <code>Model</code>, all <code>Particle</code>s in the simulation are transformed to <code>Picture</code>s.<br />
+Next, these <code>Picture</code>s are transformed to a single <code>Picture</code>. This flattening is performed by <code>pictures</code>, a function provided by <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a>. The resulting <code>Picture</code> is rendered using the <code>simulate</code> function.<br />
+Before <strong>seeing</strong> this, we have to first discuss the update function to complete the set of functions needed to start a simulation.</p>
+<h3 id="the-update-function">The update function</h3>
+<p>For updating the <code>Model</code>, <code>updateFunc</code> expects a <code>ViewPort</code>, a <code>TimeStep</code> and a <code>Model</code>. In the first simulation step, the <code>Model</code> is provided by <code>initialModel</code>. Then, <code>Model</code> is continuously passed into <code>updateFunc</code>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="ot">updateFunc ::</span> <span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a>updateFunc _ dt <span class="ot">=</span> newton dt</span></code></pre></div>
+<p>We are not interested in changing the view onto the simulation and hence can ignore the <code>ViewPort</code> argument using <code>_</code>. For simulating the single particle, we will use a custom function called <code>newton</code>.<br />
+For the first simulation with only one particle, we can use Newton’s equation of motion:</p>
+<p><span class="math display">\[
+\begin{equation*}
+\vec{r}_{t+\Delta t} = \vec{r}_{t}+\vec{v}_t \cdot \Delta t \\
+\end{equation*}
+\]</span></p>
+<p>Again, we need <span class="math inline">\(\vec{r}_{t}\)</span> and <span class="math inline">\(\vec{v}_{t}\)</span>, so the <code>Position</code> and <code>Velocity</code> of the <code>Particle</code>, to obtain the updated <code>Position</code> <span class="math inline">\(\vec{r}_{t+\Delta t}\)</span> after a <code>TimeStep</code> of <span class="math inline">\(\Delta t\)</span>. The <a href="https://hackage.haskell.org/package/linear"><code>linear</code></a> library provides scalar multiplication (e.g., <span class="math inline">\(\vec{v}_t \textcolor{blue}{\cdot} \Delta t\)</span>) via <span style="color:blue"><code>^*</code></span> and vector addition (e.g., <span class="math inline">\(\vec{r}_t \textcolor{blue}{+} \vec{v}_t \cdot \Delta t\)</span>) via <span style="color:blue"><code>+</code></span>. Hence, the final <code>newton</code> function can be implemented like this:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="ot">newton ::</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> <span class="dt">Particles</span> <span class="ot">-&gt;</span> <span class="dt">Particles</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a>newton dt [<span class="dt">Particle</span> idx pos vel] <span class="ot">=</span> [<span class="dt">Particle</span> idx pos' vel]</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a>    pos' <span class="ot">=</span> pos <span class="op">+</span> vel <span class="op">^*</span> dt</span></code></pre></div>
+<h3 id="the-first-simulation">The first simulation</h3>
+<p>Now with all the important functions at hand, let’s finish the first implementation and run it.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a>mainNewton <span class="ot">=</span> simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a><span class="ot">    initialModel ::</span> <span class="dt">Model</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a>    initialModel <span class="ot">=</span> [<span class="dt">Particle</span> <span class="dv">1</span> (<span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span>) (<span class="dt">V2</span> <span class="fl">1.0</span> <span class="fl">0.0</span>)]</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true"></a><span class="ot">    drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true"></a>    drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true"></a><span class="ot">    updateFunc ::</span> <span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true"></a>    updateFunc _ dt <span class="ot">=</span> newton dt</span></code></pre></div>
+<p>Here, <code>white</code> is a <code>Color</code> provided by <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> and <code>windowDisplay</code> a simple configuration for the displayed window.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="ot">windowDisplay ::</span> <span class="dt">Display</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a>windowDisplay <span class="ot">=</span> <span class="dt">InWindow</span> <span class="st">&quot;MD in Haskell&quot;</span> (<span class="dv">800</span>, <span class="dv">800</span>) (<span class="dv">200</span>, <span class="dv">800</span>)</span></code></pre></div>
+<p>Running this simulation will result in:</p>
+<p><img class="center" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/newton.gif" alt="A blue particle moving to the right." title="Single particle simulation"></p>
+<p>You should see a blue particle moving to the right hand side of the display. <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> comes with some convenient input functionalities: You can change the view by pressing the left mouse button down and moving the mouse. Alternatively, you can use the arrow keys on your keyboard. If you want to zoom in or out, you can use the mouse wheel. Resizing the window is possible, too. Use the <code>Esc</code> button to end the simulation and close the window.</p>
+<h2 id="hitting-a-wall">Hitting a wall</h2>
+<p>Wow, a single <code>Particle</code>! What could come next? You guessed it right, more than one <code>Particle</code>. Before implementing this, we need to ensure that the <code>Particle</code>s will stay in a distinct area. Why? Because the <code>Particle</code>s will attract and repulse each other in the following simulations. Without any barrier, they would drift apart, which would not be exciting for us to see. To confine the <code>Particle</code>s, we can set up some walls. This will result in a so-called simulation box, in which particles will bounce off the wall.<br />
+For this, there is only little we have to change in the above code. The first change will be to check whether or not the particle is going to leave the simulation box using <code>boundaryCondition</code>.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="ot">boundaryCondition ::</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">V2</span> <span class="dt">Float</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a>boundaryCondition (<span class="dt">Particle</span> _ (<span class="dt">V2</span> x y) _)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true"></a>  <span class="op">|</span> (x' <span class="op">&gt;</span> aLength<span class="op">/</span><span class="dv">2</span>) <span class="op">&amp;&amp;</span> (y' <span class="op">&gt;</span> bLength<span class="op">/</span><span class="dv">2</span>) <span class="ot">=</span> <span class="dt">V2</span> (<span class="op">-</span><span class="dv">1</span>) (<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true"></a>  <span class="op">|</span>  x' <span class="op">&gt;</span> aLength<span class="op">/</span><span class="dv">2</span>                      <span class="ot">=</span> <span class="dt">V2</span> (<span class="op">-</span><span class="dv">1</span>)   <span class="dv">1</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true"></a>  <span class="op">|</span>  y' <span class="op">&gt;</span> bLength<span class="op">/</span><span class="dv">2</span>                      <span class="ot">=</span> <span class="dt">V2</span>   <span class="dv">1</span>  (<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true"></a>  <span class="op">|</span> <span class="fu">otherwise</span>                            <span class="ot">=</span> <span class="dt">V2</span>   <span class="dv">1</span>    <span class="dv">1</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true"></a>   <span class="kw">where</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true"></a>     x' <span class="ot">=</span> <span class="fu">abs</span> x <span class="op">+</span> dotSize</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true"></a>     y' <span class="ot">=</span> <span class="fu">abs</span> y <span class="op">+</span> dotSize</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true"></a>aLength,<span class="ot"> bLength ::</span> <span class="dt">Float</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true"></a>aLength <span class="ot">=</span> <span class="fl">7.0</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true"></a>bLength <span class="ot">=</span> <span class="fl">7.0</span></span></code></pre></div>
+<p>Here, <code>aLenght</code> and <code>bLength</code> are the dimensions of the simulation box in <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span> direction, respectively. <code>boundaryCondition</code> returns a vector, which is used to modify the <code>Velocity</code> in the updated <code>newton</code> function, so that the <code>Velocity</code> flips direction, when hitting a wall.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="ot">newtonBounce ::</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Particles</span> <span class="ot">-&gt;</span> <span class="dt">Particles</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a>newtonBounce dt [particle<span class="op">@</span>(<span class="dt">Particle</span> idx pos vel)] <span class="ot">=</span> [<span class="dt">Particle</span> idx pos' vel']</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true"></a>    transVec <span class="ot">=</span> boundaryCondition particle</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true"></a>    vel' <span class="ot">=</span> transVec <span class="op">*</span> vel</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true"></a>    pos' <span class="ot">=</span> pos <span class="op">+</span> vel' <span class="op">^*</span> dt</span></code></pre></div>
+<p>Here, it is important to keep in mind, that the change in direction is done before modifying the <code>Position</code> of the <code>Particle</code>. This ensures that the <code>Particle</code> does not leave the simulation box under any circumstances. Unfortunately, this also means that the wall will never be touched. However, the distance between <code>Particle</code> and wall will be so small, that we cannot see this “error”.<br />
+Speaking of seeing, if we want to visualize the walls, we have to update the <code>drawingFunc</code> in our implementation.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true"></a><span class="ot">drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true"></a>drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> (<span class="op">:</span>) drawWalls <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span></code></pre></div>
+<p>Here, we append the result of the <code>drawWalls</code> function to the list of <code>Picture</code> before flattening the list of <code>Picture</code> to be drawn.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true"></a><span class="ot">drawWalls ::</span> <span class="dt">Picture</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true"></a>drawWalls <span class="ot">=</span> lineLoop <span class="op">$</span> rectanglePath (toPixels aLength) (toPixels bLength)</span></code></pre></div>
+<p>This function just draws a rectangle using the dimensions of the simulation box, after converting them to pixels.<br />
+With these modification the resulting simulation will look like this:</p>
+<p><img class="center" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/newton_bounce.gif" alt="A blue particle bounces off a wall." title="Particle with wall"></p>
+<p>Here, the blue <code>Particle</code> is moving to the right and will bounce off the right wall. Exactly as we intended it to be!</p>
+<h2 id="lets-get-some-more-particles-into-this-party">Let’s get some more particles into this party</h2>
+<h3 id="the-velocity-verlet-algorithm">The Velocity Verlet algorithm</h3>
+<p>Until now, we have only described the motion of a single particle. For multiple particles, we need another approach. One approach to solve the equations of motion for many (more than one) classical particles is the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm. In this algorithm, all forces between all particles are calculated in a pairwise manner and then used to determine the acceleration on these particles using:</p>
+<p><span class="math display">\[ \vec{F} = m \vec{a}  \qquad \Leftrightarrow \qquad \vec{a} = \frac{\vec{F}}{m} \]</span></p>
+<p>After determining the acceleration on each particle, the position is updated accordingly. Then, all forces are reevaluated at the new positions and combined with the forces in the previous time step. These combined forces are then used to update the velocity of all particles. This is a single full update of the <code>Position</code> and <code>Velocity</code> of all <code>Particle</code>s.<br />
+For a set of particles with mass <span class="math inline">\(m\)</span> and a simulations time step <span class="math inline">\(\Delta t\)</span>, the algorithm can be summed up by these steps:</p>
+<p><span class="math display">\[\begin{align*}
+ \{\vec{F}_t\} &amp; \leftarrow \text{calcForces}\; \{(\vec{r}_t, \vec{v}_t)\} \\
+ \{\vec{a}_t\} &amp; \leftarrow \frac{\{\vec{F}_t\}}{m} \\
+ \{(\vec{r}_{t+\Delta t}, \vec{v}_t)\} &amp; \leftarrow
+      \text{updatePositions}\; \Delta t \; \{(\vec{r}_t, \vec{v}_t) \} \; \{\vec{a}_t\} \\
+ \{\vec{F}_{t+\Delta t} \} &amp; \leftarrow \text{calcForces} \; \{(\vec{r}_{t+\Delta
+ t}, \vec{v}_t) \} \\
+ \{\vec{a}_{t+\Delta t}\} &amp; \leftarrow \frac{\{\vec{F}_{t+\Delta t}\}}{m} \\
+ \{\vec{a}_+\} &amp; \leftarrow \{(\vec{a}_t + \vec{a}_{t+\Delta t})\} \\
+ \{(\vec{r}_{t+\Delta t}, \vec{v}_{t+\Delta t})\} &amp; \leftarrow
+ \text{updateVelocities} \; \Delta t \; \{(\vec{r}_{t+\Delta t},
+ \vec{v}_t)\} \; \{\vec{a}_+\} \\
+\end{align*}\]</span></p>
+<p>Here, curly brackets (<span class="math inline">\(\{\}\)</span>) indicate a list of the respective content, e.g. <span class="math inline">\({\{\vec{F}_t\}}\)</span> is a list of two-dimensional force vectors <span class="math inline">\(\vec{F}_t\)</span> at the current time <span class="math inline">\(t\)</span>. Each list entry represents a force acting on a <code>Particle</code>.<br />
+<span class="math inline">\((\vec{r}_t,\vec{v}_t)\)</span> represents <code>Position</code> and <code>Velocity</code> of a <code>Particle</code>.<br />
+Let’s use the above formula to write some Haskell code. For this, the force <span class="math inline">\(\vec{F}\)</span> and acceleration vectors <span class="math inline">\(\vec{a}\)</span> are represented by <code>V2 Float</code>, as we already did for <code>Position</code> and <code>Velocity</code>.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Force</span>        <span class="ot">=</span> <span class="dt">V2</span> <span class="dt">Float</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Acceleration</span> <span class="ot">=</span> <span class="dt">V2</span> <span class="dt">Float</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true"></a><span class="ot">verletStep ::</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true"></a>verletStep dt particles <span class="ot">=</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true"></a>  <span class="kw">let</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true"></a>     oldF     <span class="ot">=</span> calcForces particles</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true"></a>     oldA     <span class="ot">=</span> <span class="fu">fmap</span> (<span class="op">^/</span> m) oldF</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true"></a>     newPos   <span class="ot">=</span> updatePositions dt particles oldA</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true"></a>     newF     <span class="ot">=</span> calcForces newPos</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true"></a>     newA     <span class="ot">=</span> <span class="fu">fmap</span> (<span class="op">^/</span> m) newF</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true"></a>     addedF   <span class="ot">=</span> oldA <span class="op">^+^</span> newA</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true"></a>     newParts <span class="ot">=</span> updateVelocities dt newPos addedF</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true"></a>  <span class="kw">in</span> newParts</span></code></pre></div>
+<p>In this implementation, all operations are performed with respect to a list of <code>Particle</code>s. This means, that the first entry in the <code>Force</code> list represents the <code>Force</code> acting on the first <code>Particle</code>. The same is true for the acceleration and updated lists of <code>Particle</code>s. For working with these lists of <code>V2 Float</code> we use the library <a href="https://hackage.haskell.org/package/linear"><code>linear</code></a> once again. For dividing a list of <code>Force</code> by a mass <code>m</code>, <code>fmap (^/ m)</code> can be used. Here, <span style="color:blue"><code>^/ m</code></span> is the scalar division (e.g., <span class="math inline">\(\color{blue}{\frac{\textcolor{black}{\vec{F}_t}}{m}}\)</span>), while <span style="color:blue"><code>^+^</code></span> is the addition of elements from two lists into a new list (e.g., <span class="math inline">\(\{\textcolor{blue}{(}\vec{a}_t \textcolor{blue}{+} \vec{a}_{t+\Delta t}\textcolor{blue}{)}\}\)</span> ).</p>
+<h4 id="acceleration-enters-the-room">Acceleration enters the room</h4>
+<p>Because there is more than one particle in the simulation, there will be forces between these particles and thus they will be accelerated. Hence, we have to use other equations of motion to describe the particles - now considering the acceleration.<br />
+The equation for updating the <code>Position</code> of a particle is:</p>
+<p><span class="math display">\[
+\begin{equation*}
+\vec{r}_{t+\Delta t} = \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\end{equation*}
+\]</span></p>
+<p>and can be implemented as</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true"></a><span class="ot">updatePosition ::</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">Acceleration</span> <span class="ot">-&gt;</span> <span class="dt">Particle</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true"></a>updatePosition dt (<span class="dt">Particle</span> idx pos vel) acc <span class="ot">=</span> <span class="dt">Particle</span> idx newPos vel</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true"></a>   newPos  <span class="ot">=</span> pos <span class="op">^+^</span> velPart <span class="op">^+^</span> accPart</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true"></a>   velPart <span class="ot">=</span> vel <span class="op">^*</span> dt</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true"></a>   accPart <span class="ot">=</span> acc <span class="op">^*</span> (<span class="fl">0.5</span> <span class="op">*</span> dt<span class="op">**</span><span class="dv">2</span>)</span></code></pre></div>
+<p>In the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm, the update of the <code>Velocity</code> looks like this:</p>
+<p><span class="math display">\[
+\begin{equation*}
+\vec{v}_{t+\Delta t} = \vec{v}_t + \frac{1}{2} \cdot \Delta t \cdot \vec{a}_+
+\end{equation*}
+\]</span></p>
+<p>Here, <span class="math inline">\(\{\vec{a}_+\}\)</span> is <span class="math inline">\(\{(\vec{a}_t + \vec{a}_{t + \Delta t})\}\)</span>, which means that we combine the acceleration at time <span class="math inline">\(t\)</span> (current time) and time <span class="math inline">\(t+\Delta t\)</span> (next time step) as described in the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm.<br />
+This equation for updating the <code>Velocity</code> of all <code>Particle</code>s can be implemented as follows:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true"></a><span class="ot">updateVelocity ::</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">Acceleration</span> <span class="ot">-&gt;</span> <span class="dt">Particle</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true"></a>updateVelocity dt particle acc <span class="ot">=</span> <span class="dt">Particle</span> idx pos vel'</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true"></a>    (<span class="dt">Particle</span> idx pos vel) <span class="ot">=</span> particle</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true"></a>    transVec <span class="ot">=</span> boundaryCondition particle</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true"></a>    vel' <span class="ot">=</span> transVec <span class="op">*</span> (vel <span class="op">+</span> (<span class="fl">0.5</span> <span class="op">*</span> dt) <span class="op">*^</span> acc)</span></code></pre></div>
+<p>The above two equations are used to update the <code>Position</code> and <code>Velocity</code> of a single particle , respectively. To make these functions applicable for multiple <code>Particle</code>s, we can use <code>zipWith</code>:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true"></a>updatePositions,<span class="ot"> updateVelocities ::</span> <span class="dt">TimeStep</span> <span class="ot">-&gt;</span> [<span class="dt">Particle</span>] <span class="ot">-&gt;</span> [<span class="dt">Force</span>] <span class="ot">-&gt;</span> [<span class="dt">Particle</span>]</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true"></a>updatePositions  dt <span class="ot">=</span> <span class="fu">zipWith</span> (updatePosition dt)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true"></a>updateVelocities dt <span class="ot">=</span> <span class="fu">zipWith</span> (updateVelocity dt)</span></code></pre></div>
+<p>Now, given a list of <code>Particle</code>s and a list of <code>Force</code>s, we can update the <code>Position</code>s and <code>Velocity</code>s of the <code>Particle</code>s according to the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm. The only function missing is the <code>calcForces</code> function. For this function, we have to assume a interaction between the <code>Particle</code>s. In this blog post, we will use the <a href="https://en.wikipedia.org/wiki/Lennard-Jones_potential">Lennard-Jones potential</a> for this.</p>
+<h3 id="the-lennard-jones-potential">The Lennard-Jones potential</h3>
+<p>The <a href="https://en.wikipedia.org/wiki/Lennard-Jones_potential">Lennard-Jones potential</a> is one of the most commonly used interaction potentials in molecular dynamics simulations. It describes the interaction of two particles, which are separated by a distance <span class="math inline">\(r\)</span>.</p>
+<p><span class="math display">\[ V_{\text{LJ}} = 4 \epsilon \left[\left(\frac{\sigma}{r}\right)^{12}
+   - \left(\frac{\sigma}{r}\right)^6\right] \]</span></p>
+<p>This equation consists of two terms. The first term <span class="math inline">\(\big( \frac{\sigma}{r} \big)^{12}\)</span> describes the repulsion, the second term <span class="math inline">\(- \big( \frac{\sigma}{r} \big)^{6}\)</span> the attraction of the two particles.<br />
+This can be visualized by plotting the potential:</p>
+<p><img src="../images/molecularDynamics/LennardJones.png" class="center" alt="Diagram of the Lennard-Jones potential, highlighting the interplay between
+     attraction and repulsion of two particles." title="Diagram of the Lennard-Jones potential"></p>
+<p>For small distances (<span class="math inline">\(r\)</span>), the repulsive term will dominate and the particles will be forced apart. With increasing distance, the repulsive force declines, while the attractive force becomes more dominant. This means that when the particles are far apart they start attracting each other. The interplay of the two opposing forces results in a so-called equilibrium distance (at <span class="math inline">\(2^{1/6} \sigma\)</span>), where the repulsion and attraction are in balance. At this distance, the two particles possess the smallest energy. Deviating from this distance will result in a higher energy of the system and the particles will attract or repulse each other in order to return to this equilibrium distance.</p>
+<p>In addition to the distance <span class="math inline">\(r\)</span>, the Lennard-Jones potential is determined by the parameters <span class="math inline">\(\epsilon\)</span> and <span class="math inline">\(\sigma\)</span>, which specify the depth and the position of the minimum of the potential, respectively. These two parameters are <code>Particle</code>-dependent, i.e. argon atoms have other parameters than mercury atoms. This is where the chemistry comes into play. For each element, there are different values and for molecules there are other sets of parameters to simulate their behaviour. In this blog post, we perform a single-atom simulation for argon (<span class="math inline">\(m\)</span> = 18 <span class="math inline">\(u\)</span>, <span class="math inline">\(\epsilon = 12.57\)</span>, <span class="math inline">\(\sigma = 0.335\)</span>).<br />
+<strong>Note</strong>: The <span class="math inline">\(\epsilon\)</span> value was chosen to be ten times smaller than the literature value of <span class="math inline">\(\epsilon = 125.7\)</span> <a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a> <a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> to avoid numerical errors in the simulation. Another way to avoid numerical problems is to make the time step <span class="math inline">\(\Delta t\)</span> smaller.</p>
+<p>With the interaction potential at hand we can calculate the resulting <code>Force</code>, which acts on one particle (indexed by <span class="math inline">\(i\)</span>). This is done by the following pairwise sum:</p>
+<p><span class="math display">\[ \vec{F}_{i} = \sum_{i \neq j} 4 \epsilon
+     \left[\frac{12\sigma^{12}}{r_{ij}^{14}}
+   - \frac{6\sigma^{6}}{r_{ij}^{8}}\right] \cdot \vec{r}_{ij} \]</span></p>
+<p>Here <span class="math inline">\(\vec{r}_{ij}\)</span> is the distance between two <code>Particle</code>s (<span class="math inline">\(\vec{r}_i - \vec{r}_j\)</span>), while <span class="math inline">\(r_{ij}\)</span> (not a vector) is the <a href="https://en.wikipedia.org/wiki/Euclidean_distance">Euclidean distance</a> of the <span class="math inline">\(\vec{r}_{ij}\)</span> vector. Another name for the Euclidean distance is norm, which is implemented in <a href="http://hackage.haskell.org/package/linear"><code>linear</code></a> as <code>norm</code>.<br />
+Finally, we can implement a function, which calculates the <code>Force</code>s between all <code>Particle</code>s. We break this task into smaller pieces and start by implementing a function for calculating the <code>Force</code> between two <code>Particle</code>s.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true"></a><span class="ot">calcForceBetween ::</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> <span class="dt">Force</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true"></a>calcForceBetween particleA particleB</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true"></a>  <span class="op">|</span> particleA <span class="op">==</span> particleB <span class="ot">=</span> <span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true"></a>  <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">=</span> rep <span class="op">-</span> att</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true"></a>    <span class="kw">where</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true"></a>      rep <span class="ot">=</span> repulsion  posA posB</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true"></a>      att <span class="ot">=</span> attraction posA posB</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true"></a>      posA <span class="ot">=</span> pos particleA</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true"></a>      posB <span class="ot">=</span> pos particleB</span></code></pre></div>
+<p>Importantly, a particle cannot interact with itself, designated as <span class="math inline">\(i \neq j\)</span> constraint in the above sum. From a physical standpoint, this makes a lot of sense, because how would a <code>Particle</code> interact with itself? But also mathematically self-interaction is not possible: all terms in the equation are proportional to <span class="math inline">\(\frac{1}{r}\)</span>. If we would calculate the self-interaction, we would have to divide by <span class="math inline">\(0\)</span> and that is not defined.<br />
+In the above code, we avoid this self-interaction by checking whether the two <code>Particle</code>s are the same. If this is the case, the vector <span class="math inline">\(\begin{pmatrix} 0 \\ 0 \end{pmatrix}\)</span> is returned and no resulting force will act on the <code>Particle</code>.<br />
+If the <code>Particle</code>s are not the same, the repulsion and attraction terms are of the pairwise <a href="https://en.wikipedia.org/wiki/Lennard-Jones_potential">Lennard-Jones potential</a> are calculated, resulting in a <code>Force</code> vector.<br />
+<code>repulsion</code> and <code>attraction</code> are implemented as follows:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true"></a>sigma6  <span class="ot">=</span> sigma<span class="op">**</span><span class="dv">6</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true"></a>sigma12 <span class="ot">=</span> sigma<span class="op">**</span><span class="dv">12</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true"></a>repulsion,<span class="ot"> attraction ::</span> <span class="dt">Position</span> <span class="ot">-&gt;</span> <span class="dt">Position</span> <span class="ot">-&gt;</span> <span class="dt">Force</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true"></a>repulsion posA posB  <span class="ot">=</span> (epsilon <span class="op">*</span> <span class="fl">48.0</span> <span class="op">*</span> sigma12 <span class="op">/</span> divisor ) <span class="op">*^</span> r</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true"></a>    divisor <span class="ot">=</span> (norm r)<span class="op">^</span><span class="dv">14</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true"></a>    r <span class="ot">=</span> posB <span class="op">^-^</span> posA</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true"></a>attraction posA posB <span class="ot">=</span> (epsilon <span class="op">*</span> <span class="fl">24.0</span> <span class="op">*</span> sigma6 <span class="op">/</span> divisor ) <span class="op">*^</span> r</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true"></a>    divisor <span class="ot">=</span> (norm r)<span class="op">^</span><span class="dv">8</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true"></a>    r <span class="ot">=</span> posB <span class="op">^-^</span> posA</span></code></pre></div>
+<p>With the function to calculate the <code>Force</code> between <strong>two</strong> <code>Particle</code>s at hand, we can implement one function to calculate the <code>Force</code>s between <strong>one</strong> and <strong>all other</strong> <code>Particle</code>s and use that to calculate <strong>all</strong> <code>Force</code>s between <strong>all</strong> <code>Particle</code>s:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true"></a><span class="ot">calcForceOnOne ::</span> <span class="dt">Particle</span> <span class="ot">-&gt;</span> [<span class="dt">Particle</span>] <span class="ot">-&gt;</span> [<span class="dt">Force</span>]</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true"></a>calcForceOnOne particle <span class="ot">=</span> <span class="fu">fmap</span> (calcForceBetween particle)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true"></a><span class="ot">calcForceAcc ::</span> [<span class="dt">Particle</span>] <span class="ot">-&gt;</span> [<span class="dt">Particle</span>] <span class="ot">-&gt;</span> [<span class="dt">Force</span>]</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true"></a>calcForceAcc [particle] particles <span class="ot">=</span> calcForceOnOne particle particles</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true"></a>calcForceAcc (p<span class="op">:</span>articles) particles <span class="ot">=</span>     calcForceOnOne p particles</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true"></a>                                      <span class="op">^+^</span> calcForceAcc articles particles</span></code></pre></div>
+<p>This leads to the implementation of <code>calcForces</code>, which we need for the simulations.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true"></a><span class="ot">calcForces ::</span> [<span class="dt">Particle</span>] <span class="ot">-&gt;</span> [<span class="dt">Force</span>]</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true"></a>calcForces particles <span class="ot">=</span> calcForceAcc particles particles</span></code></pre></div>
+<p><code>calcForces</code> takes two lists of <code>Particle</code>s and loops through the first list to calculate <strong>all</strong> <code>Force</code>s on <strong>all</strong> <code>Particle</code>s using the second unmodified list. With this, we have completed the implementation of the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm. <strong>Yeah</strong>!</p>
+<h2 id="running-velocity-verlet-simulations">Running Velocity Verlet simulations</h2>
+<p>That is a lot to digest. Now, it’s time to bring the algorithm to life. We will focus on how to generate different start geometries (<code>Model</code>) for the simulations. Let’s start with the smallest many-<code>Particle</code> system imaginable, the two-<code>Particle</code> system.</p>
+<h3 id="it-takes-two-to-tango">It takes two to tango</h3>
+<p>With the fully implemented <code>verletStep</code> function at hand, the implementation of the two-<code>Particle</code> system looks like this:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true"></a><span class="ot">mainVerlet ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true"></a>mainVerlet <span class="ot">=</span> simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true"></a><span class="ot">    initialModel ::</span> <span class="dt">Model</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true"></a>    initialModel <span class="ot">=</span> [ <span class="dt">Particle</span> <span class="dv">1</span> (<span class="dt">V2</span>   <span class="fl">0.3</span>  <span class="fl">0.0</span>) (<span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span>)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true"></a>                   , <span class="dt">Particle</span> <span class="dv">2</span> (<span class="dt">V2</span> (<span class="op">-</span><span class="fl">0.3</span>) <span class="fl">0.0</span>) (<span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span>) ]</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true"></a><span class="ot">    drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true"></a>    drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> (<span class="op">:</span>) drawWalls <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true"></a><span class="ot">    updateFunc ::</span> <span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true"></a>    updateFunc _ dt <span class="ot">=</span> verletStep dt</span></code></pre></div>
+<p>Comparing this simulation with the previous one, there are two differences: Instead of <code>newton</code>, we use the <code>verletStep</code> function and the <code>initialModel</code> is different. In the current <code>initialModel</code>, we place two <code>Particle</code>s separated by a distance of <code>0.6</code> on the <span class="math inline">\(x\)</span>-axis. Both <code>Particle</code>s are at rest at the beginning of the simulation.<br />
+Running the simulation will result in two <code>Particle</code>s attracting and repulsing each other:</p>
+<p><img class="center" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/verlet.gif" alt="Two particles attracting and repulsing each other" title="Two particles verlet simulation"></p>
+<p>First, the two <code>Particle</code>s attract each other, moving to the center of mass. When the distance between both becomes small, they repulse each other.</p>
+<h3 id="lettuce.-no-i-mean-lattice">Lettuce. No, I mean lattice!</h3>
+<p>Now that the simulation is running for two <code>Particle</code>s, it would be nice to set up simulations with more <code>Particle</code>s. Doing this “by hand” is quite cumbersome. Instead, we can use the following function to place the <code>Particle</code>s on a <span class="math inline">\(n \times n\)</span> square lattice:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true"></a><span class="ot">squareLatticeModel ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [<span class="dt">Particle</span>]</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true"></a>squareLatticeModel n <span class="ot">=</span> <span class="fu">zipWith3</span> <span class="dt">Particle</span> idxs poss vels</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true"></a>    idxs <span class="ot">=</span> [<span class="dv">1</span><span class="op">..</span>(n<span class="op">^</span><span class="dv">2</span>)]</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true"></a>    poss <span class="ot">=</span> squareLattice n n</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true"></a>    vels <span class="ot">=</span> <span class="fu">replicate</span> (n<span class="op">^</span><span class="dv">2</span>) (<span class="dt">V2</span> <span class="fl">0.0</span> <span class="fl">0.0</span>)</span></code></pre></div>
+<p>Here, we generate <span class="math inline">\(n^2\)</span> <code>Index</code>s and <code>Velocity</code>s. In this example all <code>Velocity</code>s are set to be <span class="math inline">\(0\)</span>. <code>squareLattice</code> is a recursive function, which places <span class="math inline">\(n\)</span> columns of <span class="math inline">\(n\)</span> <code>Particle</code>s per row inside the simulation box.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true"></a><span class="ot">squareLattice ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [<span class="dt">Position</span>]</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true"></a>squareLattice _ <span class="dv">0</span>   <span class="ot">=</span> []</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true"></a>squareLattice dim acc <span class="ot">=</span> latticeRow dim dim yPos <span class="op">++</span> squareLattice dim (acc<span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true"></a>    dy   <span class="ot">=</span> bLength <span class="op">/</span> <span class="fu">fromIntegral</span> (dim<span class="op">+</span><span class="dv">1</span>)</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true"></a>    yPos <span class="ot">=</span> bLength<span class="op">/</span><span class="dv">2</span> <span class="op">-</span> (<span class="fu">fromIntegral</span> acc <span class="op">*</span> dy)</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true"></a><span class="ot">latticeRow ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> [<span class="dt">Position</span>]</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true"></a>latticeRow _ <span class="dv">0</span> _ <span class="ot">=</span> []</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true"></a>latticeRow dim acc yPos <span class="ot">=</span> <span class="dt">V2</span> xPos yPos <span class="op">:</span> latticeRow dim (acc<span class="op">-</span><span class="dv">1</span>) yPos</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true"></a>    dx   <span class="ot">=</span> aLength <span class="op">/</span> <span class="fu">fromIntegral</span> (dim<span class="op">+</span><span class="dv">1</span>)</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true"></a>    xPos <span class="ot">=</span> aLength<span class="op">/</span><span class="dv">2</span> <span class="op">-</span> (<span class="fu">fromIntegral</span> acc <span class="op">*</span> dx)</span></code></pre></div>
+<p>Now let’s use <code>squareLatticeModel</code> to run a simulation with <span class="math inline">\(4 \times 4\)</span> <code>Particle</code>s.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true"></a><span class="ot">mainVerletSquare ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true"></a>mainVerletSquare <span class="ot">=</span> simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true"></a><span class="ot">    initialModel ::</span> <span class="dt">Model</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true"></a>    initialModel <span class="ot">=</span> squareLatticeModel <span class="dv">4</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true"></a><span class="ot">    drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true"></a>    drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> (<span class="op">:</span>) drawWalls <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true"></a></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true"></a><span class="ot">    updateFunc ::</span> <span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true"></a>    updateFunc _ dt <span class="ot">=</span> verletStep dt</span></code></pre></div>
+<p><img class="center" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/verletSquare.gif" alt="A simulation starting with a square lattice of 4 times 4 particles" title="Square lattice simulation"></p>
+<p>In the beginning of the simulation, all <code>Particle</code>s are at rest for some time. During this period, the <code>Force</code>s acting on the <code>Particle</code>s gradually increase until the <code>Particle</code>s start moving As you might notice, there is a certain symmetry in this movement, which gets lost after some time due to numeric instabilities of floating-point arithmetics. Nevertheless, the simulation allows for some qualitative observations regarding the phase transition of the argon atoms: A single large cluster indicates that the argon atoms form a single liquid phase. In contrast, multiple clusters indicate nucleation, the process of forming droplets during the transition between gaseous and liquid phase <a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> <a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a>. When all argon atom are separate from one another (no clusters), they would be in the gaseous phase.</p>
+<h3 id="chaos-is-a-friend-of-mine">Chaos is a friend of mine</h3>
+<p>As a bonus, I would like to show you an alternative to the square lattice for initializing <code>Particle</code>s: using a pseudo-random number generator from <a href="http://hackage.haskell.org/package/random"><code>random</code></a>. For this, we need to modify the implementation of the <code>main</code> function by adding a new <code>Model</code> and a seed for the pseudo-random number generator:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true"></a><span class="ot">mainVerletRandom ::</span> <span class="dt">IO</span> ()</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true"></a>mainVerletRandom <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true"></a>  seed <span class="ot">&lt;-</span> newStdGen</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true"></a>  simulate windowDisplay white simulationRate (initialModel seed) drawingFunc updateFunc</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true"></a>    <span class="kw">where</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true"></a><span class="ot">      initialModel ::</span> <span class="dt">RandomGen</span> g <span class="ot">=&gt;</span> g <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true"></a>      initialModel <span class="ot">=</span> modelRandom <span class="dv">16</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true"></a></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true"></a><span class="ot">      drawingFunc ::</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Picture</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true"></a>      drawingFunc <span class="ot">=</span> pictures <span class="op">.</span> (<span class="op">:</span>) drawWalls <span class="op">.</span> <span class="fu">fmap</span> drawParticle</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true"></a></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true"></a><span class="ot">      updateFunc ::</span> <span class="dt">ViewPort</span> <span class="ot">-&gt;</span> <span class="dt">Float</span> <span class="ot">-&gt;</span> <span class="dt">Model</span> <span class="ot">-&gt;</span> <span class="dt">Model</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true"></a>      updateFunc _ dt <span class="ot">=</span> verletStep dt</span></code></pre></div>
+<p>Here, the <code>seed</code> is generated using the <code>newStdGen</code> function. This <code>seed</code> is then passed to <code>initialModel</code> as an argument. This will ensure that each time we run the program, a different starting configuration is generated.<br />
+After that, the <code>modelRandom</code> function can be implemented like this:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true"></a><span class="ot">modelRandom ::</span> <span class="dt">RandomGen</span> g <span class="ot">=&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> g <span class="ot">-&gt;</span> [<span class="dt">Particle</span>]</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true"></a>modelRandom n g <span class="ot">=</span> <span class="fu">zipWith3</span> <span class="dt">Particle</span> idxs poss vels</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true"></a>    idxs <span class="ot">=</span> [<span class="dv">1</span><span class="op">..</span>n]</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true"></a>    poss <span class="ot">=</span> randomPos n g</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true"></a>    vels <span class="ot">=</span> randomVel n g</span></code></pre></div>
+<p>Here, <span class="math inline">\(n\)</span> <code>Index</code>s, <code>Position</code>s and <code>Velocity</code>s are generated. The latter two, however, are generated randomly using the <code>seed</code>. Generating random <code>Velocity</code> values via <code>randomVel</code> is done using <code>randomRs</code>, which is kind of magical.</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true"></a><span class="ot">randomVel ::</span> <span class="dt">RandomGen</span> g <span class="ot">=&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> g <span class="ot">-&gt;</span> [<span class="dt">Velocity</span>]</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true"></a>randomVel n g <span class="ot">=</span> <span class="fu">take</span> n <span class="op">$</span> randomRs ( <span class="op">-</span><span class="fl">0.2</span>, <span class="fl">0.2</span> )<span class="ot"> g ::</span> [<span class="dt">Velocity</span>]</span></code></pre></div>
+<p>Passing a range (<code>(-0.2, 0.2)</code>) and a return type (<code>[Velocity]</code>), <code>randomRs</code> will generate a infinite stream of randomly generated <code>Velocity</code>s. Keep in mind, that it was not needed to specify that <code>Velocity</code> has two entries (it is still a <code>V2 Float</code> after all). From this stream of randomly generated <code>Velocity</code>s, we take <span class="math inline">\(n\)</span> values.<br />
+For generating random <code>Position</code>s, the story is a bit different, because the range for the <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span> values depends on the dimensions of the simulation box (<code>aLength</code> and <code>bLength</code>). Hence, <code>genPos</code> is a bit more verbose.</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true"></a><span class="ot">genPos ::</span> <span class="dt">RandomGen</span> g <span class="ot">=&gt;</span> g <span class="ot">-&gt;</span> (<span class="dt">Position</span>, g)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true"></a>genPos g <span class="ot">=</span> (pos, g'')</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true"></a>    (xGen,  g') <span class="ot">=</span> randomR ( <span class="op">-</span>aLengthHalf, aLengthHalf ) g</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true"></a>    (yGen, g'') <span class="ot">=</span> randomR ( <span class="op">-</span>bLengthHalf, bLengthHalf ) g'</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true"></a>    pos <span class="ot">=</span> <span class="dt">V2</span> xGen yGen</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true"></a>    aLengthHalf <span class="ot">=</span> aLength <span class="op">/</span> <span class="dv">2</span> <span class="op">-</span> dotSize</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true"></a>    bLengthHalf <span class="ot">=</span> bLength <span class="op">/</span> <span class="dv">2</span> <span class="op">-</span> dotSize</span></code></pre></div>
+<p>Here, the <code>seed</code> of the pseudo-random number generator (<code>g</code>) is passed to the first generator, which returns a random value for the <span class="math inline">\(x\)</span> dimension (<code>xGen</code>), but also a new generator <code>g'</code>, which is then used for the random value in the <span class="math inline">\(y\)</span> dimension. And with this at hand, we can run the simulation.</p>
+<p><img class="center" src="https://raw.githubusercontent.com/mkDoku/molecularDynamics/main/gifs/verletRandom.gif" alt="A simulation of 16 particles with randomly generated positions an velocities" title="Simulation with 16 randomly placed particles"></p>
+<p><strong>A word of warning</strong>: Sometimes, when starting this kind of simulation, you might see multiple <code>Particle</code>s located very close to each other. This will result in some numerical errors, due to the <span class="math inline">\(\frac{1}{r}\)</span> behaviour of the Lennard-Jones potential. In this case, the simulation will “crash” by removing all the <code>Particle</code>s from the simulation box.</p>
+<p>Such simulations using randomly initialized <code>Particle</code>s are more exciting, because every simulation run is different. In contrast, square lattice simulations are always the same for the same number of <code>Particle</code>s. However, the square lattice approach is the one that is used in real-world molecular dynamics simulations. There, the starting geometry resembles a cube instead of a lattice, because it is performed in three dimensional space.</p>
+<h2 id="summary-and-outlook">Summary and Outlook</h2>
+<p>Let’s recap what we achieved in this blog post: we implemented a molecular dynamics simulation of argon atoms using the <a href="https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet">Velocity Verlet</a> algorithm and the <a href="https://en.wikipedia.org/wiki/Lennard-Jones_potential">Lennard-Jones potential</a>. We also explored different ways of initializing the particles and visualized the simulations using the <a href="https://hackage.haskell.org/package/gloss"><code>gloss</code></a> library.</p>
+<p>The implemented simulations are for educational purposes only. For a “real-world” quantitative simulation, these implementations would need to be extended. First, a so-called thermostat <a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a> would need to be added to measure and adjust the temperature inside the simulation box. Second, the boundary condition of solid walls are conceptually flawed; <a href="https://en.wikipedia.org/wiki/Periodic_boundary_conditions">periodic boundary conditions</a> are the way to go, but would require the use of so-called Verlet lists <a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>. Third and most importantly, we did not measure anything during the simulation. So a logger for physical properties of interest during the simulation would need to be implemented as well.</p>
+<p>Performance-wise there is also a lot do to. For starters, in real-world molecular dynamics simulation, e.g. <a href="https://lammps.sandia.gov">LAMMPS</a> and <a href="http://139.30.122.11/MOSCITO/">MOSCITO</a>, the visualization and simulation are decoupled, because it is more efficient to run the whole simulation (which could take days or weeks) while dumping important information (positions, velocities, etc.) into files. These so-called snapshots can be visualized after the simulation using separate tools, e.g. <a href="https://www.ks.uiuc.edu/Research/vmd/">VMD</a>.</p>
+<p>This blog post is an introduction into the fascinating world of molecular dynamics simulations. You now have some basic tools at hand to run your own simulations. Have fun simulating and see you next time.</p>
+<h2 id="references">References</h2>
+<section class="footnotes" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p><a href="https://www.wiley.com/en-us/Essentials+of+Computational+Chemistry:+Theories+and+Models,+2nd+Edition-p-9780470091821">Cramer, C. J. <em>Essentials of Computational Chemistry: Theories and Models</em> 2nd ed. (John Wiley &amp; Sons, Ltd, 2004).</a><a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p><a href="https://aip.scitation.org/doi/abs/10.1063/1.477510?casa_token=feYi2iLVTdUAAAAA:9iWJP4D74jg9InckcKu75O4Khbty_Tjvpl6dOv4Jhe8PS9WLD6tehIydNFI4y7pqbpCffCBjQT3k">Yasuoka, K &amp; Matsumoto, M. Molecular dynamics of homogeneous nucleation in the vapor phase. II. Water. <em>J. Chem. Phys.</em> <strong>109</strong>, 8463 (1998).</a><a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3" role="doc-endnote"><p><a href="http://www.sklogwiki.org/SklogWiki/index.php/Argon">http://www.sklogwiki.org/SklogWiki/index.php/Argon</a><a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4" role="doc-endnote"><p><a href="https://aip.scitation.org/doi/10.1063/1.479848">White, J. A., Lennard-Jones as a model for argon and test of extended renormalization group calculations <em>J. Chem. Phys.</em> <strong>111</strong>, 9352 (1999).</a><a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5" role="doc-endnote"><p><a href="https://aip.scitation.org/doi/abs/10.1063/1.477510?casa_token=feYi2iLVTdUAAAAA:9iWJP4D74jg9InckcKu75O4Khbty_Tjvpl6dOv4Jhe8PS9WLD6tehIydNFI4y7pqbpCffCBjQT3k">Yasuoka, K &amp; Matsumoto, M. Molecular dynamics of homogeneous nucleation in the vapor phase. II. Water. <em>J. Chem. Phys.</em> <strong>109</strong>, 8463 (1998).</a><a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6" role="doc-endnote"><p><a href="https://www.sciencedirect.com/book/9780122673511/understanding-molecular-simulation">Frenkel, D. &amp; Smit, B. <em>Understanding Molecular Simulation: From Algorithms to Applications</em> 2nd ed. (Academic Press, 2001).</a><a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7" role="doc-endnote"><p><a href="https://link.springer.com/chapter/10.1007/b99427">Hünenberger, P. in <em>Advanced Computer Simulation</em> (eds Dr. Holm, C. and Prof. Dr. Kremer, K.) <strong>105–149</strong> (Springer Berlin Heidelberg, 2005).</a><a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8" role="doc-endnote"><p><a href="https://www.sciencedirect.com/book/9780122673511/understanding-molecular-simulation">Frenkel, D. &amp; Smit, B. <em>Understanding Molecular Simulation: From Algorithms to Applications</em> 2nd ed. (Academic Press, 2001).</a><a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+  </section>
+
+  <footer class="info">
+    Posted on June 19, 2021
+
+    
+      by Sascha Bubeck
+    
+
+    
+    <br> Topics: <a href="../tags/Haskell.html" class="tag">Haskell</a><a href="../tags/Gloss.html" class="tag">Gloss</a><a href="../tags/Simulation.html" class="tag">Simulation</a>
+    
+  </footer>
+
+</article>
+
+    </main>
+
+
+  </body>
+</html>
