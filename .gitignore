@@ -3,3 +3,5 @@ _site/
 .stack-work/
 hie.yaml
 keys/
+references/
+posts/wip/

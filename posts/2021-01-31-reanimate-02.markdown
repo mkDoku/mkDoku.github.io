@@ -132,10 +132,12 @@ Hence, we need functions to transform between both coordinate systems.
 
 Here are the equations, which are needed for such transformation:
 
+$$
 \begin{align*}
 x &= r \cdot \cos(\phi) \\
 y &= r \cdot \sin(\phi)
 \end{align*}
+$$
 
 So, for a given angle $\phi$ and a length $r$ we can
 calculate the $(x,y)$-coordinate of our point in space.
