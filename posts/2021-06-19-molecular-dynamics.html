@@ -498,6 +498,12 @@ For generating random <code>Position</code>s, the story is a bit different, beca
 <p>The implemented simulations are for educational purposes only. For a “real-world” quantitative simulation, these implementations would need to be extended. First, a so-called thermostat <a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a> would need to be added to measure and adjust the temperature inside the simulation box. Second, the boundary condition of solid walls are conceptually flawed; <a href="https://en.wikipedia.org/wiki/Periodic_boundary_conditions">periodic boundary conditions</a> are the way to go, but would require the use of so-called Verlet lists <a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a>. Third and most importantly, we did not measure anything during the simulation. So a logger for physical properties of interest during the simulation would need to be implemented as well.</p>
 <p>Performance-wise there is also a lot do to. For starters, in real-world molecular dynamics simulation, e.g. <a href="https://lammps.sandia.gov">LAMMPS</a> and <a href="http://139.30.122.11/MOSCITO/">MOSCITO</a>, the visualization and simulation are decoupled, because it is more efficient to run the whole simulation (which could take days or weeks) while dumping important information (positions, velocities, etc.) into files. These so-called snapshots can be visualized after the simulation using separate tools, e.g. <a href="https://www.ks.uiuc.edu/Research/vmd/">VMD</a>.</p>
 <p>This blog post is an introduction into the fascinating world of molecular dynamics simulations. You now have some basic tools at hand to run your own simulations. Have fun simulating and see you next time.</p>
+<h2 id="give-me-your-opinion">Give me your opinion</h2>
+<p>Feel free to discuss with me and other people at:</p>
+<ul>
+<li><a href="https://www.reddit.com/r/haskell/comments/o3k6nt/molecular_dynamic_simulations_in_haskell/">Reddit</a></li>
+<li><a href="https://twitter.com/SaschaBubeck/status/1406514263913644034">Twitter</a></li>
+</ul>
 <h2 id="references">References</h2>
 <section class="footnotes" role="doc-endnotes">
 <hr />
