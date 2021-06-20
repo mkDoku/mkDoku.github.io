@@ -1002,6 +1002,13 @@ This blog post is an introduction into the fascinating world of molecular dynami
 simulations. You now have some basic tools at hand to run your own simulations. Have fun
 simulating and see you next time.
 
+## Give me your opinion
+
+Feel free to discuss with me and other people at:
+
+ - [Reddit](https://www.reddit.com/r/haskell/comments/o3k6nt/molecular_dynamic_simulations_in_haskell/)
+ - [Twitter](https://twitter.com/SaschaBubeck/status/1406514263913644034)
+
 ## References
 
   [^cramer]: [Cramer, C. J. _Essentials of Computational Chemistry: Theories and Models_ 2nd
