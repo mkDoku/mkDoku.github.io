@@ -171,7 +171,7 @@ each other. This movement can be described by these equations of Newton's mechan
 
 $$
 \begin{align*}
-\vec{r}_{t+\Delta t} &= \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\vec{r}_{t+\Delta t} &= \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t^2 \\
 \vec{v}_{t+\Delta t} &= \vec{v}_t + \vec{a}_t \cdot \Delta t \\
 \end{align*}
 $$
@@ -563,7 +563,7 @@ The equation for updating the `Position` of a particle is:
 
 $$
 \begin{equation*}
-\vec{r}_{t+\Delta t} = \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\vec{r}_{t+\Delta t} = \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t^2 \\
 \end{equation*}
 $$
 
