@@ -137,7 +137,7 @@ There are various algorithms to describe the motion of particles numerically. He
 <p>Let’s start off with a simple system, in which the particles move independent of each other. This movement can be described by these equations of Newton’s mechanics:</p>
 <p><span class="math display">\[
 \begin{align*}
-\vec{r}_{t+\Delta t} &amp;= \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\vec{r}_{t+\Delta t} &amp;= \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t^2 \\
 \vec{v}_{t+\Delta t} &amp;= \vec{v}_t + \vec{a}_t \cdot \Delta t \\
 \end{align*}
 \]</span></p>
@@ -315,7 +315,7 @@ Let’s use the above formula to write some Haskell code. For this, the force <s
 The equation for updating the <code>Position</code> of a particle is:</p>
 <p><span class="math display">\[
 \begin{equation*}
-\vec{r}_{t+\Delta t} = \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t \\
+\vec{r}_{t+\Delta t} = \vec{r}_t+\vec{v}_t\cdot\Delta t+\frac{1}{2}\vec{a}_t\cdot \Delta t^2 \\
 \end{equation*}
 \]</span></p>
 <p>and can be implemented as</p>
