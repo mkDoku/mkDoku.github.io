@@ -908,9 +908,10 @@ After that, the `modelRandom` function can be implemented like this:
 modelRandom :: RandomGen g => Int -> g -> [Particle]
 modelRandom n g = zipWith3 Particle idxs poss vels
   where
-    idxs = [1..n]
-    poss = randomPos n g
-    vels = randomVel n g
+    idxs      = [1..n]
+    (g', g'') = split g
+    poss      = randomPos n g'
+    vels      = randomVel n g''
 ```
 
 Here, $n$ `Index`s, `Position`s and
