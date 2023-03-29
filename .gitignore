@@ -5,3 +5,5 @@ hie.yaml
 keys/
 references/
 posts/wip/
+dist-newstyle/
+stack.yaml.lock
