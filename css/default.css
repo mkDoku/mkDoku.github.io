@@ -381,12 +381,12 @@ summary:focus {
 }
 
 details > summary::marker {
-  content: "▸ ";
+  content: "  ▸ ";
   color: #719b34;
 }
 
 details[open] > summary::marker {
-  content: "▾ ";
+  content: "  ▾ ";
   color: #567427;
 }
 
