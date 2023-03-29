@@ -3,15 +3,17 @@ title: About Me
 ---
 Hi!
 
-My name is Sascha Bubeck and I am a PhD student at the [Institute for Theoretical
-Chemistry](http://www.tc.uni-koeln.de/) at the [University of
-Cologne](https://portal.uni-koeln.de/en/uoc-home),
-[Germany](https://en.wikipedia.org/wiki/Germany).  
-Welcome to my homepage, which I use to document my process of learning new programming
-language features and packages.
-My main focus (so far) lies on the programming languages C++ and Haskell.
-Haskell provides a way to dive purely into the world of functional
-programming, while C++ is a complex, but powerful all-rounder.
+My name is Sascha Bubeck (he/him) and I work as a software engineer at
+[BioSolveIT](http://www.biosolveit.de/). I obtained my PhD in Theoretical
+Chemistry at the University of Cologne (See 'Research Interests' below) and
+joined BioSolveIT in the beginning of 2022.
+
+Welcome to my homepage, which I use to document my process of deepening my
+knowledge of programming languages and their respective ecosystems.
+While I mainly use C++ and the Qt framework for my work at BioSolveIT, I eager
+to use more functional-oriented languages, like Haskell and Elm,
+during my leisure time. Only if there are more fitting to my problems, of
+course.
 
 # Research Interests
 
@@ -78,7 +80,7 @@ its influence on atomic and molecular properties is still lacking.
     quantum chemical simulations into QOL
   * [x] Implementation of interface between Hartree-Fock-SCF simulation and Coupled
       Cluster simulation using the CPP integrals
-  * [ ] Investigating the influence of the CPP approach in quantum chemical
+  * [x] Investigating the influence of the CPP approach in quantum chemical
       systems
 
 ### References
