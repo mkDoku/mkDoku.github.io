@@ -12,3 +12,13 @@ cabal build
 ```bash
 site watch
 ```
+
+# Alternative build/watch
+
+```bash
+cabal exec site build
+
+stack exec site build
+
+nix-build release.nix; ./result/bin/site watch
+```
