@@ -235,11 +235,11 @@ With this, we can check if two particle are the same by comparing their indices.
 ongoing simulation by providing the function `simulate`.
 
 ```haskell
-simulate :: Display                               -- Window config
-         -> Color                                 -- Background color
+simulate :: GG.Display                            -- Window config
+         -> GG.Color                              -- Background color
          -> Int                                   -- FPS
          -> model                                 -- Model
-         -> (model -> Picture)                    -- Draw function
+         -> (model -> GG.Picture)                 -- Draw function
          -> (ViewPort -> Float -> model -> model) -- Update function
          -> IO ()
 ```
@@ -280,8 +280,8 @@ Next, we have to specify how to render (draw) the model. For this, we use the
 `drawingFunc` function.
 
 ```haskell
-drawingFunc :: Model -> Picture
-drawingFunc = pictures . fmap drawParticle
+drawingFunc :: Model -> GG.Picture
+drawingFunc = GG.pictures . fmap drawParticle
 ```
 
 Keep in mind that `Model`, provided as
@@ -291,13 +291,13 @@ of `Particle`s to a list of `Picture`s. This is done by applying the `drawPartic
 function to every element of the input.
 
 ```haskell
-drawParticle :: Particle -> Picture
+drawParticle :: Particle -> GG.Picture
 drawParticle (Particle _ (V2 x y) _) =
-  translate x' y' $ color (circleSolid $ toPixels dotSize)
+  GG.translate x' y' $ color (GG.circleSolid $ toPixels dotSize)
   where
     x' = toPixels x
     y' = toPixels y
-    color = Color (withAlpha 0.8 blue)
+    color = Color (GG.withAlpha 0.8 GG.blue)
 
 toPixels :: Float -> Float
 toPixels = (* 100.0)
@@ -311,7 +311,7 @@ using the `Position` ($x$ and $y$ coordinates) of the `Particle`, which was prov
 to the function as argument. `toPixels` is needed to transform the `Position` from "real
 world units" to pixels, which represent the coordinates on the screen.
 By applying this function to every element of the `Model`, all `Particle`s in the
-simulation are transformed to `Picture`s.  
+simulation are transformed to `Picture`s. 
 Next, these `Picture`s are transformed to a single `Picture`.
 This flattening is performed by `pictures`, a
 function provided by [`gloss`](https://hackage.haskell.org/package/gloss). The
@@ -364,13 +364,13 @@ Now with all the important functions at hand, let's finish the first implementat
 run it.
 
 ```haskell
-mainNewton = simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc
+mainNewton = GG.simulate windowDisplay GG.white simulationRate initialModel drawingFunc updateFunc
   where
     initialModel :: Model
     initialModel = [Particle 1 (V2 0.0 0.0) (V2 1.0 0.0)]
 
-    drawingFunc :: Model -> Picture
-    drawingFunc = pictures . fmap drawParticle
+    drawingFunc :: Model -> GG.Picture
+    drawingFunc = GG.pictures . fmap drawParticle
 
     updateFunc :: ViewPort -> Float -> Model -> Model
     updateFunc _ dt = newton dt
@@ -381,8 +381,8 @@ Here, `white` is a `Color` provided by
 and `windowDisplay` a simple configuration for the displayed window.
 
 ```haskell
-windowDisplay :: Display
-windowDisplay = InWindow "MD in Haskell" (800, 800) (200, 800)
+windowDisplay :: GG.Display
+windowDisplay = GG.InWindow "MD in Haskell" (800, 800) (200, 800)
 ```
 
 Running this simulation will result in:
@@ -449,25 +449,25 @@ Here, it is important to keep in mind, that the change in direction is done befo
 modifying the `Position` of the `Particle`. This ensures that the `Particle` does not
 leave the simulation box under any circumstances. Unfortunately, this also means that the
 wall will never be touched. However, the distance between `Particle` and wall will be so
-small, that we cannot see this "error".  
+small, that we cannot see this "error". 
 Speaking of seeing, if we want to visualize the walls, we have to update the `drawingFunc` in
 our implementation.
 
 ```haskell
-drawingFunc :: Model -> Picture
-drawingFunc = pictures . (:) drawWalls . fmap drawParticle
+drawingFunc :: Model -> GG.Picture
+drawingFunc = GG.pictures . (:) drawWalls . fmap drawParticle
 ```
 
 Here, we append the result of the `drawWalls` function to the list of `Picture` before
 flattening the list of `Picture` to be drawn.
 
 ```haskell
-drawWalls :: Picture
-drawWalls = lineLoop $ rectanglePath (toPixels aLength) (toPixels bLength)
+drawWalls :: GG.Picture
+drawWalls = GG.lineLoop $ GG.rectanglePath (toPixels aLength) (toPixels bLength)
 ```
 
 This function just draws a rectangle using the dimensions of the simulation box, after
-converting them to pixels.  
+converting them to pixels. 
 With these modification the resulting simulation will look like this:
 
 <img class="center"
@@ -498,7 +498,7 @@ After determining the acceleration on each particle, the position is
 updated accordingly. Then, all forces are reevaluated at the new positions and combined
 with the forces in the previous time step. These combined forces are then used to update the
 velocity of all particles. This is a single full update of the `Position`
-and `Velocity` of all `Particle`s.  
+and `Velocity` of all `Particle`s. 
 For a set of particles with mass $m$
 and a simulations time step $\Delta t$, the algorithm can be summed up by these steps:
 
@@ -518,8 +518,8 @@ and a simulations time step $\Delta t$, the algorithm can be summed up by these 
 
 Here, curly brackets ($\{\}$) indicate a list of the respective
 content, e.g. ${\{\vec{F}_t\}}$ is a list of two-dimensional force vectors $\vec{F}_t$ at
-the current time $t$. Each list entry represents a force acting on a `Particle`.  
-$(\vec{r}_t,\vec{v}_t)$ represents `Position` and `Velocity` of a `Particle`.  
+the current time $t$. Each list entry represents a force acting on a `Particle`. 
+$(\vec{r}_t,\vec{v}_t)$ represents `Position` and `Velocity` of a `Particle`. 
 Let's use the above formula to write some Haskell code. For this, the force $\vec{F}$ and
 acceleration vectors $\vec{a}$ are represented by `V2 Float`, as we already did for
 `Position` and `Velocity`.
@@ -662,7 +662,7 @@ atoms have other parameters than mercury atoms. This is where the chemistry come
 play. For each element, there are different values and for molecules there are other sets
 of parameters to simulate their behaviour. In this blog post, we perform a
 single-atom simulation for argon ($m$ = 18 $u$, $\epsilon =
-12.57$, $\sigma = 0.335$).  
+12.57$, $\sigma = 0.335$). 
 **Note**: The $\epsilon$ value was chosen to be ten times smaller
 than the literature value of $\epsilon = 125.7$ [^argon1] [^argon2] to avoid numerical
 errors in the simulation.
@@ -681,7 +681,7 @@ while $r_{ij}$ (not a vector) is the [Euclidean
 distance](https://en.wikipedia.org/wiki/Euclidean_distance) of the $\vec{r}_{ij}$ vector.
 Another name for the Euclidean distance is norm, which is implemented in
 [`linear`](http://hackage.haskell.org/package/linear) as
-`norm`.  
+`norm`. 
 Finally, we can implement a function, which calculates the `Force`s between all
 `Particle`s. We break this task into smaller pieces and start by implementing a function
 for calculating the `Force` between two `Particle`s.
@@ -705,11 +705,11 @@ self-interaction is not possible: all terms in the equation are proportional to
 $\frac{1}{r}$.
 If we
 would calculate the self-interaction, we would have to divide by $0$ and that is not
-defined.  
+defined. 
 In the above code, we avoid this self-interaction by checking whether the two
 `Particle`s are the same. If this is the case, the vector
 $\begin{pmatrix} 0 \\ 0 \end{pmatrix}$ is returned and no resulting force will act on the
-`Particle`.  
+`Particle`. 
 If the `Particle`s are not the same, the repulsion and attraction terms are of the
 pairwise
 [Lennard-Jones potential](https://en.wikipedia.org/wiki/Lennard-Jones_potential) are
@@ -774,14 +774,14 @@ two-`Particle` system looks like this:
 
 ```haskell
 mainVerlet :: IO ()
-mainVerlet = simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc
+mainVerlet = GG.simulate windowDisplay GG.white simulationRate initialModel drawingFunc updateFunc
   where
     initialModel :: Model
     initialModel = [ Particle 1 (V2   0.3  0.0) (V2 0.0 0.0)
                    , Particle 2 (V2 (-0.3) 0.0) (V2 0.0 0.0) ]
 
-    drawingFunc :: Model -> Picture
-    drawingFunc = pictures . (:) drawWalls . fmap drawParticle
+    drawingFunc :: Model -> GG.Picture
+    drawingFunc = GG.pictures . (:) drawWalls . fmap drawParticle
 
     updateFunc :: ViewPort -> Float -> Model -> Model
     updateFunc _ dt = verletStep dt
@@ -844,13 +844,13 @@ Now let's use `squareLatticeModel` to run a simulation with $4 \times 4$ `Partic
 
 ```haskell
 mainVerletSquare :: IO ()
-mainVerletSquare = simulate windowDisplay white simulationRate initialModel drawingFunc updateFunc
+mainVerletSquare = GG.simulate windowDisplay GG.white simulationRate initialModel drawingFunc updateFunc
   where
     initialModel :: Model
     initialModel = squareLatticeModel 4
 
-    drawingFunc :: Model -> Picture
-    drawingFunc = pictures . (:) drawWalls . fmap drawParticle
+    drawingFunc :: Model -> GG.Picture
+    drawingFunc = GG.pictures . (:) drawWalls . fmap drawParticle
 
     updateFunc :: ViewPort -> Float -> Model -> Model
     updateFunc _ dt = verletStep dt
@@ -887,13 +887,13 @@ a new `Model` and a seed for the pseudo-random number generator:
 mainVerletRandom :: IO ()
 mainVerletRandom = do
   seed <- newStdGen
-  simulate windowDisplay white simulationRate (initialModel seed) drawingFunc updateFunc
+  GG.simulate windowDisplay GG.white simulationRate (initialModel seed) drawingFunc updateFunc
     where
       initialModel :: RandomGen g => g -> Model
       initialModel = modelRandom 16
 
-      drawingFunc :: Model -> Picture
-      drawingFunc = pictures . (:) drawWalls . fmap drawParticle
+      drawingFunc :: Model -> GG.Picture
+      drawingFunc = GG.pictures . (:) drawWalls . fmap drawParticle
 
       updateFunc :: ViewPort -> Float -> Model -> Model
       updateFunc _ dt = verletStep dt
