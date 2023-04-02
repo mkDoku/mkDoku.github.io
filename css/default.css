@@ -90,7 +90,7 @@ a:active {
 
 /* define a marker for all lists */
 ul li::marker {
-  content: "▸ ";
+  content: "  ▸ ";
   color: var(--myTextColor);
 }
 
