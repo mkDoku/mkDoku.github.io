@@ -5,7 +5,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Sascha Bubeck
 maintainer:          bubecksascha@t-online.de
-copyright:           2023 Sascha Bubeck
+copyright:           2024 Sascha Bubeck
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
